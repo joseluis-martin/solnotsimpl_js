@@ -2,16 +2,25 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Envío de XML al Colegio de Registradores</title>
+    <link rel="stylesheet" href="style.css">
     <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
 </head>
 <body>
-    <!-- Formulario para seleccionar y enviar el archivo XML -->
-    <form id="xmlUploadForm" enctype="multipart/form-data">
-        <input type="file" name="file" accept=".xml">
-        <input type="button" value="Enviar XML" id="sendButton">
-    </form>
-    <div id="responseContainer"></div>
+    <div class="container">
+        <h2>Envío de XML</h2>
+        <form id="xmlUploadForm" enctype="multipart/form-data">
+            <div class="form-group">
+                <label for="file">Seleccione el archivo XML:</label>
+                <input type="file" name="file" accept=".xml">
+            </div>
+            <div class="form-group">
+                <input type="button" value="Enviar XML" id="sendButton">
+            </div>
+        </form>
+        <div id="responseContainer"></div>
+    </div>
 
     <script>
         $(document).ready(function() {
@@ -23,8 +32,8 @@
                     url: '/sendXML',
                     type: 'POST',
                     data: formData,
-                    contentType: false, // Necesario para el tipo 'multipart/form-data'
-                    processData: false, // Evita que jQuery transforme los datos
+                    contentType: false,
+                    processData: false,
                     success: function(response) {
                         $('#responseContainer').html(`<pre>${response}</pre>`);
                     },

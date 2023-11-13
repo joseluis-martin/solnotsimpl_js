@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Envío de XML al Colegio de Registradores</title>
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+</head>
+<body>
+    <!-- Formulario para seleccionar y enviar el archivo XML -->
+    <form id="xmlUploadForm" enctype="multipart/form-data">
+        <input type="file" name="file" accept=".xml">
+        <input type="button" value="Enviar XML" id="sendButton">
+    </form>
+    <div id="responseContainer"></div>
+
+    <script>
+        $(document).ready(function() {
+            $('#sendButton').click(function(e) {
+                e.preventDefault();
+                var formData = new FormData($('#xmlUploadForm')[0]);
+
+                $.ajax({
+                    url: '/sendXML',
+                    type: 'POST',
+                    data: formData,
+                    contentType: false, // Necesario para el tipo 'multipart/form-data'
+                    processData: false, // Evita que jQuery transforme los datos
+                    success: function(response) {
+                        $('#responseContainer').html(`<pre>${response}</pre>`);
+                    },
+                    error: function() {
+                        $('#responseContainer').html('Error al procesar la petición');
+                    }
+                });
+            });
+        });
+    </script>
+</body>
+</html>

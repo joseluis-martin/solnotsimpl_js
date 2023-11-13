@@ -128,3 +128,9 @@ dist
 .yarn/build-state.yml
 .yarn/install-state.gz
 .pnp.*
+
+# Apple MacBook Pro
+.DS_Store
+
+#Información confidencial
+certificados/

@@ -5,45 +5,21 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Envío de XML al Colegio de Registradores</title>
     <link rel="stylesheet" href="style.css">
-    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
 </head>
 <body>
     <div class="container">
         <h2>Envío de XML</h2>
-        <id="xmlUploadForm" enctype="multipart/form-data">
+        <form id="xmlUploadForm" action="/sendXML" method="post" enctype="multipart/form-data">
             <div class="form-group">
                 <label for="file">Seleccione el archivo XML:</label>
-                <input type="file" name="file" accept=".xml">
+                <input type="file" name="file" accept=".xml" required>
             </div>
-        
             <div class="form-group">
-                <input type="button" value="Enviar XML" id="sendButton">
+                <input type="submit" value="Enviar XML">
             </div>
         </form>
+        <!-- Se puede agregar un contenedor para mostrar respuestas o mensajes del servidor -->
         <div id="responseContainer"></div>
     </div>
-
-    <script>
-        $(document).ready(function() {
-            $('#sendButton').click(function(e) {
-                e.preventDefault();
-                var formData = new FormData($('#xmlUploadForm')[0]);
-
-                $.ajax({
-                    url: '/sendXML',
-                    type: 'POST',
-                    data: formData,
-                    contentType: false,
-                    processData: false,
-                    success: function(response) {
-                        $('#responseContainer').html(`<pre>${response}</pre>`);
-                    },
-                    error: function() {
-                        $('#responseContainer').html('Error al procesar la petición');
-                    }
-                });
-            });
-        });
-    </script>
 </body>
 </html>

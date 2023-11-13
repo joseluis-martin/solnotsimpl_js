@@ -46,8 +46,8 @@ app.post('/sendXML', upload.single('file'), async (req, res) => {
 });
 
 // Leer los certificados SSL
-const privateKey = fs.readFileSync('proytasv.depeca.uah.es.pem', 'utf8');
-const certificate = fs.readFileSync('proytasv_depeca_uah_es_cert.cer', 'utf8');
+const privateKey = fs.readFileSync('./certificados/proytasv.depeca.uah.es.pem', 'utf8');
+const certificate = fs.readFileSync('./certificados/proytasv_depeca_uah_es_cert.cer', 'utf8');
 const credentials = { key: privateKey, cert: certificate };
 
 // Crear servidor HTTPS

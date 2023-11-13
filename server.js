@@ -8,6 +8,12 @@ const axios = require('axios');
 const app = express();
 const port = 443;
 
+const instance = axios.create({
+    httpsAgent: new https.Agent({  
+        rejectUnauthorized: false // Desactiva la validación de certificados
+    })
+});
+
 // Configuración para multer
 const upload = multer({ dest: 'uploads/' });
 
@@ -31,7 +37,7 @@ app.post('/sendXML', upload.single('file'), async (req, res) => {
             url: 'https://test.registradores.org/xmlpeticion'
         };
 
-        const response = await axios(options);
+        const response = await instance(options);
 
         // Puedes enviar una página o mensaje de respuesta aquí
         res.send(`<pre>${response.data}</pre>`);
@@ -41,8 +47,8 @@ app.post('/sendXML', upload.single('file'), async (req, res) => {
     }
 });
 
-const privateKey = fs.readFileSync('proytasv.depeca.uah.es.pem', 'utf8');
-const certificate = fs.readFileSync('proytasv_depeca_uah_es_cert.cer', 'utf8');
+const privateKey = fs.readFileSync('./certificados/proytasv.depeca.uah.es.pem', 'utf8');
+const certificate = fs.readFileSync('./certificados/proytasv_depeca_uah_es_cert.cer', 'utf8');
 const credentials = { key: privateKey, cert: certificate };
 
 const httpsServer = https.createServer(credentials, app);

@@ -34,27 +34,36 @@ app.post('/sendXML', upload.single('file'), async (req, res) => {
             method: 'POST',
             headers: { 'Content-Type': 'text/xml' },
             data: xmlData,
-            url: 'https://test.registradores.org/xmlpeticion'
+            url: 'https://test.registradores.org/xmlpeticion',
         };
 
         const response = await instance(options);
 
-        // Puedes enviar una página o mensaje de respuesta aquí
-        res.send(`
-            <!DOCTYPE html>
-            <html lang="es">
-            <head>
-                <title>Acuse de Recibo</title>
-                <!-- Incluir aquí cualquier CSS o metadatos -->
-            </head>
-            <body>
-                <div class="container">
-                    <h2>Acuse del Colegio de Registradores</h2>
-                    <pre>${response.data}</pre> <!-- Muestra el acuse aquí -->
-                </div>
-            </body>
-            </html>
-        `);
+        // Guardar la respuesta en un archivo XML
+        fs.writeFile('./xml/acuseRecibido.xml', response.data, (err) => {
+            if (err) {
+                console.error('Error al guardar el archivo:', err);
+                res.status(500).send('Error al guardar el archivo');
+                return;
+            }
+
+            // Enviar una confirmación o la respuesta al cliente
+            res.send(`
+                <!DOCTYPE html>
+                <html lang="es">
+                <head>
+                    <title>Acuse de Recibo Guardado</title>
+                    <!-- Incluir aquí cualquier CSS o metadatos -->
+                </head>
+                <body>
+                    <div class="container">
+                        <h2>Acuse del Colegio de Registradores Guardado</h2>
+                        <p>El acuse ha sido guardado exitosamente en un archivo XML.</p>
+                    </div>
+                </body>
+                </html>
+            `);
+        });
     } catch (error) {
         console.error(error);
         res.status(500).send('Error al procesar la petición');

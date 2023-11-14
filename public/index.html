@@ -21,29 +21,6 @@
         <!-- Se puede agregar un contenedor para mostrar respuestas o mensajes del servidor -->
         <div id="responseContainer"></div>
     </div>
-    <script>
-        $(document).ready(function() {
-            $('#sendButton').click(function(e) {
-                e.preventDefault();
-                var formData = new FormData($('#xmlUploadForm')[0]);
-
-                $.ajax({
-                    url: '/sendXML',
-                    type: 'POST',
-                    data: formData,
-                    contentType: false,
-                    processData: false,
-                    success: function(response) {
-                        // Aquí mostramos el acuse en la página
-                        $('#responseContainer').html(`<pre>${response}</pre>`);
-                    },
-                    error: function() {
-                        $('#responseContainer').html('Error al procesar la petición');
-                    }
-                });
-            });
-        });
-    </script>
 
 </body>
 </html>

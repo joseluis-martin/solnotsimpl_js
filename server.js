@@ -40,7 +40,21 @@ app.post('/sendXML', upload.single('file'), async (req, res) => {
         const response = await instance(options);
 
         // Puedes enviar una página o mensaje de respuesta aquí
-        res.send(`<pre>${response.data}</pre>`);
+        res.send(`
+            <!DOCTYPE html>
+            <html lang="es">
+            <head>
+                <title>Acuse de Recibo</title>
+                <!-- Incluir aquí cualquier CSS o metadatos -->
+            </head>
+            <body>
+                <div class="container">
+                    <h2>Acuse del Colegio de Registradores</h2>
+                    <pre>${response.data}</pre> <!-- Muestra el acuse aquí -->
+                </div>
+            </body>
+            </html>
+        `);
     } catch (error) {
         console.error(error);
         res.status(500).send('Error al procesar la petición');

@@ -59,6 +59,11 @@ app.post('/sendXML', upload.single('file'), async (req, res) => {
 
             // Imprimir los campos del XML en la consola
             console.log('Acuse de Recibo:', result);
+            
+            // Extraer los campos deseados
+            const entidad = result['corpme-floti'].acuses[0].credenciales[0].entidad[0];
+            const email = result['corpme-floti'].acuses[0].credenciales[0].email[0];
+            const identificador = result['corpme-floti'].acuses[0].acuse[0].identificador[0];
 
             // Aquí puedes acceder a campos específicos del XML
             // Por ejemplo: console.log(result.nombreDelCampo);
@@ -74,6 +79,11 @@ app.post('/sendXML', upload.single('file'), async (req, res) => {
                     <div class="container">
                         <h2>Acuse del Colegio de Registradores Guardado</h2>
                         <p>El acuse ha sido guardado exitosamente en un archivo XML.</p>
+                        <ul>
+                            <li>Entidad: ${entidad}</li>
+                            <li>Email: ${email}</li>
+                            <li>Referencia: ${identificador}</li>
+                        </ul>
                     </div>
                 </body>
                 </html>
@@ -107,6 +117,14 @@ app.post('/spnts', (req, res) => {
             // Confirmar la recepción
             res.status(200).send('Respuesta recibida y procesada.');
         });
+
+        // Leer el XML de confirmación
+        const confirmacionXml = fs.readFileSync(path.join(__dirname, '.xml/corpme_floti_ok.xml'), 'utf8');
+
+        // Establecer el tipo de contenido y enviar el XML de confirmación
+        res.set('Content-Type', 'text/xml');
+        res.send(confirmacionXml);
+
     } catch (error) {
         console.error(error);
         res.status(500).send('Error al procesar la respuesta');

@@ -3,9 +3,11 @@ const https = require('https');
 const fs = require('fs');
 const path = require('path');
 const multer = require('multer');
+const xml2js = require('xml2js');
 const axios = require('axios');
 
 const app = express();
+const upload = multer({ dest: 'uploads/' });
 const port = 443;
 
 const instance = axios.create({
@@ -14,9 +16,8 @@ const instance = axios.create({
     })
 });
 
-// Configuración para multer
-const upload = multer({ dest: 'uploads/' });
-
+// Middleware para parsear JSON en las respuestas entrantes
+app.use(express.json());
 // Servir archivos estáticos (HTML, CSS, JS, etc.)
 app.use(express.static('public'));
 
@@ -46,7 +47,21 @@ app.post('/sendXML', upload.single('file'), async (req, res) => {
                 res.status(500).send('Error al guardar el archivo');
                 return;
             }
+        });
 
+        // Parsear el XML del acuse de recibo
+        xml2js.parseString(response.data, (err, result) => {
+            if (err) {
+                // Manejar errores de parseo
+                console.error('Error al parsear el XML:', err);
+                return;
+            }
+
+            // Imprimir los campos del XML en la consola
+            console.log('Acuse de Recibo:', result);
+
+            // Aquí puedes acceder a campos específicos del XML
+            // Por ejemplo: console.log(result.nombreDelCampo);
             // Enviar una confirmación o la respuesta al cliente
             res.send(`
                 <!DOCTYPE html>
@@ -64,9 +79,37 @@ app.post('/sendXML', upload.single('file'), async (req, res) => {
                 </html>
             `);
         });
+    
     } catch (error) {
         console.error(error);
         res.status(500).send('Error al procesar la petición');
+    }
+});
+
+app.post('/spnts', (req, res) => {
+    try {
+        // Obtener los datos XML (asumiendo que están en el cuerpo de la solicitud)
+        const xmlData = req.body;
+
+        // Parsear el XML y extraer el PDF codificado en Base64
+        xml2js.parseString(xmlData, (err, result) => {
+            if (err) {
+                throw err; // o manejar el error adecuadamente
+            }
+
+            // Extraer la cadena Base64 (ajustar según la estructura real del XML)
+            const base64data = result.documento.pdf[0];
+
+            // Decodificar de Base64 a binario y guardar el archivo PDF
+            const pdfBuffer = Buffer.from(base64data, 'base64');
+            fs.writeFileSync('documentoRecibido.pdf', pdfBuffer);
+
+            // Confirmar la recepción
+            res.status(200).send('Respuesta recibida y procesada.');
+        });
+    } catch (error) {
+        console.error(error);
+        res.status(500).send('Error al procesar la respuesta');
     }
 });
 

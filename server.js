@@ -18,6 +18,12 @@ const instance = axios.create({
 
 // Middleware para parsear JSON en las respuestas entrantes
 app.use(express.json());
+
+app.use(express.text({ type: 'text/xml' }));
+
+
+
+
 // Servir archivos estáticos (HTML, CSS, JS, etc.)
 app.use(express.static('public'));
 
@@ -68,6 +74,10 @@ app.post('/sendXML', upload.single('file'), async (req, res) => {
             // Aquí puedes acceder a campos específicos del XML
             // Por ejemplo: console.log(result.nombreDelCampo);
             // Enviar una confirmación o la respuesta al cliente
+            console.log("El valor de la variable es: " + entidad);
+            console.log("El valor de la variable es: " + email);
+            console.log("El valor de la variable es: " + identificador);
+
             res.send(`
                 <!DOCTYPE html>
                 <html lang="es">
@@ -79,11 +89,6 @@ app.post('/sendXML', upload.single('file'), async (req, res) => {
                     <div class="container">
                         <h2>Acuse del Colegio de Registradores Guardado</h2>
                         <p>El acuse ha sido guardado exitosamente en un archivo XML.</p>
-                        <ul>
-                            <li>Entidad: ${entidad}</li>
-                            <li>Email: ${email}</li>
-                            <li>Referencia: ${identificador}</li>
-                        </ul>
                     </div>
                 </body>
                 </html>
@@ -96,30 +101,36 @@ app.post('/sendXML', upload.single('file'), async (req, res) => {
     }
 });
 
-app.post('/spnts', (req, res) => {
+app.post('/spnts', express.text({ type: 'text/xml' }), async (req, res) => {
+    console.log('Tipo de Contenido:', req.headers['content-type']);
+    console.log('Cuerpo de la Solicitud:', req.body);
     try {
         // Obtener los datos XML (asumiendo que están en el cuerpo de la solicitud)
         const xmlData = req.body;
 
+        // Guardar el XML recibido en un archivo
+        console.log(xmlData);
+        //fs.writeFileSync('xml/documentoRecibido.xml', xmlData);
+
         // Parsear el XML y extraer el PDF codificado en Base64
-        xml2js.parseString(xmlData, (err, result) => {
-            if (err) {
-                throw err; // o manejar el error adecuadamente
-            }
+        //xml2js.parseString(xmlData, (err, result) => {
+        //    if (err) {
+        //        throw err; // o manejar el error adecuadamente
+        //    }
 
             // Extraer la cadena Base64 (ajustar según la estructura real del XML)
-            const base64data = result.documento.pdf[0];
+           // const base64data = result.documento.pdf[0];
 
             // Decodificar de Base64 a binario y guardar el archivo PDF
-            const pdfBuffer = Buffer.from(base64data, 'base64');
-            fs.writeFileSync('documentoRecibido.pdf', pdfBuffer);
+           // const pdfBuffer = Buffer.from(base64data, 'base64');
+           // fs.writeFileSync('.pdf/documentoRecibido.pdf', pdfBuffer);
 
             // Confirmar la recepción
-            res.status(200).send('Respuesta recibida y procesada.');
-        });
+        //    res.status(200).send('Respuesta recibida y procesada.');
+        //});
 
         // Leer el XML de confirmación
-        const confirmacionXml = fs.readFileSync(path.join(__dirname, '.xml/corpme_floti_ok.xml'), 'utf8');
+        const confirmacionXml = fs.readFileSync(path.join(__dirname, 'xml/corpme_floti_ok.xml'), 'utf8');
 
         // Establecer el tipo de contenido y enviar el XML de confirmación
         res.set('Content-Type', 'text/xml');

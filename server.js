@@ -98,7 +98,7 @@ app.post('/sendXML', upload.single('file'), async (req, res) => {
     }
 });
 
-app.post('/spnts', express.text({ type: 'text/xml' }), async (req, res) => {
+app.post('/spnts', async (req, res) => {
     console.log('Tipo de Contenido:', req.headers['content-type']);
     console.log('Cuerpo de la Solicitud:', req.body);
     try {

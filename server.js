@@ -5,7 +5,7 @@ const path = require('path');
 const multer = require('multer');
 const xml2js = require('xml2js');
 const axios = require('axios');
-
+const xmlparser = require('express-xml-bodyparser');
 const app = express();
 const upload = multer({ dest: 'uploads/' });
 const port = 443;
@@ -19,10 +19,7 @@ const instance = axios.create({
 // Middleware para parsear JSON en las respuestas entrantes
 app.use(express.json());
 
-app.use(express.text({ type: 'text/xml' }));
-
-
-
+app.use(xmlparser());
 
 // Servir archivos estáticos (HTML, CSS, JS, etc.)
 app.use(express.static('public'));
@@ -105,36 +102,50 @@ app.post('/spnts', express.text({ type: 'text/xml' }), async (req, res) => {
     console.log('Tipo de Contenido:', req.headers['content-type']);
     console.log('Cuerpo de la Solicitud:', req.body);
     try {
-        // Obtener los datos XML (asumiendo que están en el cuerpo de la solicitud)
-        const xmlData = req.body;
+        const xmlData = req.body; // El cuerpo de la solicitud ya es un objeto JavaScript
 
-        // Guardar el XML recibido en un archivo
-        console.log(xmlData);
-        //fs.writeFileSync('xml/documentoRecibido.xml', xmlData);
+        // Acceder a la estructura del objeto
+        const corpmeFloti = xmlData['corpme-floti'];
+        if (corpmeFloti && corpmeFloti.respuesta && corpmeFloti.respuesta.length > 0) {
+            const respuesta = corpmeFloti.respuesta[0];
 
-        // Parsear el XML y extraer el PDF codificado en Base64
-        //xml2js.parseString(xmlData, (err, result) => {
-        //    if (err) {
-        //        throw err; // o manejar el error adecuadamente
-        //    }
+            // Acceder a los elementos dentro de 'respuesta'
+            const identificador = respuesta.identificador ? respuesta.identificador[0] : null;
+            const referencia = respuesta.referencia ? respuesta.referencia[0] : null;
+            const tipoRespuesta = respuesta['tipo-respuesta'] ? respuesta['tipo-respuesta'][0] : null;
+            const fechaHora = respuesta['fecha-hora'] ? respuesta['fecha-hora'][0] : null;
+            const informacion = respuesta.informacion ? respuesta.informacion[0] : null;
 
-            // Extraer la cadena Base64 (ajustar según la estructura real del XML)
-           // const base64data = result.documento.pdf[0];
+            // Procesar la información, como extraer el fichero PDF si está presente
+            let ficheroPdfBase64;
+            if (informacion && informacion.fichero && informacion.fichero.length > 0) {
+                ficheroPdfBase64 = informacion.fichero[0]['_']; // Suponiendo que es un elemento de texto
+                // Aquí puedes decodificar el Base64 y guardar el PDF si es necesario
+            }
 
-            // Decodificar de Base64 a binario y guardar el archivo PDF
-           // const pdfBuffer = Buffer.from(base64data, 'base64');
-           // fs.writeFileSync('.pdf/documentoRecibido.pdf', pdfBuffer);
+            const pdfBuffer = Buffer.from(ficheroPdfBase64, 'base64');
+            const pdfFilePath = './pdf/NotaSimple.pdf';
+            fs.writeFile(pdfFilePath, pdfBuffer, (err) => {
+                if (err) {
+                    console.error('Error al guardar el archivo PDF:', err);
+                    res.status(500).send('Error al guardar el archivo PDF');
+                    return;
+                }
+            });
 
-            // Confirmar la recepción
-        //    res.status(200).send('Respuesta recibida y procesada.');
-        //});
+            console.log(identificador +' '+ referencia +' '+ fechaHora);
+       // Leer el XML de confirmación
+       const confirmacionXml = fs.readFileSync(path.join(__dirname, 'xml/corpme_floti_ok.xml'), 'utf8');
 
-        // Leer el XML de confirmación
-        const confirmacionXml = fs.readFileSync(path.join(__dirname, 'xml/corpme_floti_ok.xml'), 'utf8');
+       // Establecer el tipo de contenido y enviar el XML de confirmación
+       res.set('Content-Type', 'text/xml');
+       res.send(confirmacionXml);
 
-        // Establecer el tipo de contenido y enviar el XML de confirmación
-        res.set('Content-Type', 'text/xml');
-        res.send(confirmacionXml);
+        } else {
+            res.status(400).send('Formato de XML inválido o datos faltantes');
+        }
+
+ 
 
     } catch (error) {
         console.error(error);

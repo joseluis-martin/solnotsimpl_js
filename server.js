@@ -153,10 +153,19 @@ app.post('/spnts', async (req, res) => {
     }
 });
 
-const privateKey = fs.readFileSync('Certificado_SSL\\proytasv.depeca.uah.es.pem', 'utf8');
-const certificate = fs.readFileSync('Certificado_SSL\\proytasv_depeca_uah_es_cert.cer', 'utf8');
-const credentials = { key: privateKey, cert: certificate };
+// const privateKey = fs.readFileSync('Certificado_SSL\\proytasv.depeca.uah.es.pem', 'utf8');
+// const certificate = fs.readFileSync('Certificado_SSL\\proytasv_depeca_uah_es_cert.cer', 'utf8');
+// const credentials = { key: privateKey, cert: certificate };
 
+// Ruta de tu archivo .pfx y su contraseña
+const pfxPath = '../CertificadoTasvalor/certificate.pfx';
+const pfxPassword = 'M4s72aKalo';
+
+// Opciones de HTTPS incluyendo el archivo .pfx y la contraseña
+const credentials = {
+    pfx: fs.readFileSync(pfxPath),
+    passphrase: pfxPassword
+};
 const httpsServer = https.createServer(credentials, app);
 
 httpsServer.listen(port, () => {

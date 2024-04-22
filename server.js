@@ -4,11 +4,13 @@ const fs = require('fs');
 const path = require('path');
 const multer = require('multer');
 const xml2js = require('xml2js');
+const builder = new xml2js.Builder();
 const axios = require('axios');
 const xmlparser = require('express-xml-bodyparser');
 const app = express();
 const upload = multer({ dest: 'uploads/' });
-const port = 443;
+const port = 5999;
+const sql = require('mssql');
 
 const instance = axios.create({
     httpsAgent: new https.Agent({  
@@ -23,6 +25,65 @@ app.use(xmlparser());
 
 // Servir archivos estáticos (HTML, CSS, JS, etc.)
 app.use(express.static('public'));
+
+const config = {
+    user: 'notassimples',  // Usuario de la base de datos
+    password: 'akdsuTR54%',  // Contraseña del usuario
+    server: '192.168.100.8',  // Dirección IP y puerto del servidor SQL Server
+    port: 1433,
+    database: 'tasadores',  // Nombre de la base de datos
+    options: {
+        encrypt: false,  // Generalmente, para conexiones locales no es necesario cifrar
+        enableArithAbort: true
+    }
+};
+
+async function fetchNifForPeticiones() {
+    try {
+        await sql.connect(config);
+        const peticiones = await sql.query`SELECT idPeticion FROM peticiones WHERE idEstado = 0`;
+
+        for (let i = 0; i < peticiones.recordset.length; i++) {
+            const idPeticion = peticiones.recordset[i].idPeticion;
+            const datosSolicitud = await sql.query`SELECT * FROM datosSolicitud WHERE idPeticion = ${idPeticion}`;
+
+            // Si idTipoSolicitud es 1, devolvemos el nifTitular
+            if (datosSolicitud.recordset[0].idTipoSolicitud === 1) {
+                return{
+                    nifTitular: datosSolicitud.recordset[0].nifTitular,
+                    idPeticion: idPeticion
+            };
+        }
+    }
+
+        throw new Error("No se encontró un registro válido en datosSolicitud con idTipoSolicitud = 1.");
+    } catch (err) {
+        console.error('Error en la base de datos:', err);
+        throw err;
+    } finally {
+        await sql.close();
+    }
+}
+
+async function updateXML(data) {
+    const {nifTitular, idPeticion } = data;
+    const xml = fs.readFileSync('./xml/peticion_x_titular.xml', 'utf-8');
+
+    xml2js.parseString(xml, async (err, result) => {
+        if (err) {
+            throw err;
+        }
+
+        // Actualizar el NIF en el XML
+        result['corpme-floti'].peticiones[0].peticion[0].titular[0].nif[0] = nifTitular;
+
+        const newXml = builder.buildObject(result);
+        fs.writeFileSync(`./xml/peticion_x_titular ${idPeticion}.xml`, newXml);
+        console.log('Archivo XML actualizado correctamente.');
+    });
+}
+
+
 
 // Ruta principal para servir la página HTML
 app.get('/', (req, res) => {
@@ -171,3 +232,7 @@ const httpsServer = https.createServer(credentials, app);
 httpsServer.listen(port, () => {
     console.log(`Servidor escuchando en https://localhost:${port}`);
 });
+
+fetchNifForPeticiones()
+    .then(updateXML)
+    .catch(console.error);

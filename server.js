@@ -87,7 +87,8 @@ async function updateXMLxTitular(data) {
             method: 'POST',
             headers: { 'Content-Type': 'text/xml' },
             datasent: newXml,
-            url: 'https://test.registradores.org/xmlpeticion',
+            url: 'http://localhost:3000/xmlpeticion',
+            // url: 'https://test.registradores.org/xmlpeticion',
         };
 
         try {
@@ -168,75 +169,6 @@ app.get('/', (req, res) => {
     res.sendFile(path.join(__dirname, '/public/index.html'));
 });
 
-// Ruta para manejar el formulario enviado
-app.post('/sendXML', upload.single('file'), async (req, res) => {
-    try {
-        const xmlData = fs.readFileSync(req.file.path, 'utf8');
-
-        const options = {
-            method: 'POST',
-            headers: { 'Content-Type': 'text/xml' },
-            data: xmlData,
-            url: 'https://test.registradores.org/xmlpeticion',
-        };
-
-        const response = await instance(options);
-
-        // Guardar la respuesta en un archivo XML
-        fs.writeFile('./xml/acuseRecibido.xml', response.data, (err) => {
-            if (err) {
-                console.error('Error al guardar el archivo:', err);
-                res.status(500).send('Error al guardar el archivo');
-                return;
-            }
-        });
-
-        // Parsear el XML del acuse de recibo
-        xml2js.parseString(response.data, (err, result) => {
-            if (err) {
-                // Manejar errores de parseo
-                console.error('Error al parsear el XML:', err);
-                return;
-            }
-
-            // Imprimir los campos del XML en la consola
-            console.log('Acuse de Recibo:', result);
-            
-            // Extraer los campos deseados
-            const entidad = result['corpme-floti'].acuses[0].credenciales[0].entidad[0];
-            const email = result['corpme-floti'].acuses[0].credenciales[0].email[0];
-            const identificador = result['corpme-floti'].acuses[0].acuse[0].identificador[0];
-
-            // Aquí puedes acceder a campos específicos del XML
-            // Por ejemplo: console.log(result.nombreDelCampo);
-            // Enviar una confirmación o la respuesta al cliente
-            console.log("El valor de la variable es: " + entidad);
-            console.log("El valor de la variable es: " + email);
-            console.log("El valor de la variable es: " + identificador);
-
-            res.send(`
-                <!DOCTYPE html>
-                <html lang="es">
-                <head>
-                    <title>Acuse de Recibo Guardado</title>
-                    <!-- Incluir aquí cualquier CSS o metadatos -->
-                </head>
-                <body>
-                    <div class="container">
-                        <h2>Acuse del Colegio de Registradores Guardado</h2>
-                        <p>El acuse ha sido guardado exitosamente en un archivo XML.</p>
-                    </div>
-                </body>
-                </html>
-            `);
-        });
-    
-    } catch (error) {
-        console.error(error);
-        res.status(500).send('Error al procesar la petición');
-    }
-});
-
 app.post('/spnts', async (req, res) => {
     console.log('Tipo de Contenido:', req.headers['content-type']);
     console.log('Cuerpo de la Solicitud:', req.body);
@@ -292,9 +224,6 @@ app.post('/spnts', async (req, res) => {
     }
 });
 
-// const privateKey = fs.readFileSync('Certificado_SSL\\proytasv.depeca.uah.es.pem', 'utf8');
-// const certificate = fs.readFileSync('Certificado_SSL\\proytasv_depeca_uah_es_cert.cer', 'utf8');
-// const credentials = { key: privateKey, cert: certificate };
 
 // Ruta de tu archivo .pfx y su contraseña
 const pfxPath = './Certificado_SSL/2024/certificate.pfx';

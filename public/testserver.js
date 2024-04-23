@@ -8,12 +8,14 @@ app.use(bodyParser.text({ type: '*/*' }));
 app.post('/xmlpeticion', (req, res) => {
     console.log('XML recibido:', req.body);  // Muestra el XML recibido
 
-    // Simula un acuse de recibo XML
+    // Simula un acuse de recibo XML con múltiples identificador
     const acuseXML = `
     <corpme-floti xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://www.test.registradores.org/schema/floti/envio.xsd">
         <acuses id="acuses">
             <acuse>
                 <identificador>Z16TF84T</identificador>
+                <identificador>A24DF56H</identificador>
+                <identificador>G78JK90L</identificador>
                 <!-- Descomentar la siguiente línea para simular un error -->
                 <!-- <error>7</error> -->
             </acuse>
@@ -26,3 +28,4 @@ app.post('/xmlpeticion', (req, res) => {
 app.listen(port, () => {
     console.log(`Servidor escuchando en http://localhost:${port}`);
 });
+

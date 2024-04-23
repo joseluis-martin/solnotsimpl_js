@@ -43,29 +43,32 @@ async function fetchNifForPeticiones() {
         await sql.connect(config);
         const peticiones = await sql.query`SELECT idPeticion FROM peticiones WHERE idEstado = 0`;
 
+        // Recorrer cada peticion encontrada
         for (let i = 0; i < peticiones.recordset.length; i++) {
             const idPeticion = peticiones.recordset[i].idPeticion;
             const datosSolicitud = await sql.query`SELECT * FROM datosSolicitud WHERE idPeticion = ${idPeticion}`;
 
-            // Si idTipoSolicitud es 1, devolvemos el nifTitular
-            if (datosSolicitud.recordset[0].idTipoSolicitud === 1) {
-                return{
+            // Si idTipoSolicitud es 1, devolvemos el nifTitular y el idPeticion
+            if (datosSolicitud.recordset.length > 0 && datosSolicitud.recordset[0].idTipoSolicitud === 1) {
+                return {
                     nifTitular: datosSolicitud.recordset[0].nifTitular,
                     idPeticion: idPeticion
-            };
+                };
+            }
         }
-    }
 
-        throw new Error("No se encontró un registro válido en datosSolicitud con idTipoSolicitud = 1.");
+        // Si no se encontraron registros válidos o el bucle ha terminado sin retornar
+        console.log("No se encontraron registros válidos o el idTipoSolicitud no es 1.");
+        return null;  // Devolvemos null para indicar que no hay acción a realizar
     } catch (err) {
         console.error('Error en la base de datos:', err);
-        throw err;
+        throw err;  // Considera si quieres realmente lanzar el error o simplemente loguearlo
     } finally {
         await sql.close();
     }
 }
 
-async function updateXML(data) {
+async function updateXMLxTitular(data) {
     const {nifTitular, idPeticion } = data;
     const xml = fs.readFileSync('./xml/peticion_x_titular.xml', 'utf-8');
 
@@ -219,7 +222,7 @@ app.post('/spnts', async (req, res) => {
 // const credentials = { key: privateKey, cert: certificate };
 
 // Ruta de tu archivo .pfx y su contraseña
-const pfxPath = 'Certificado_SSL/certificate.pfx';
+const pfxPath = './Certificado_SSL/2024/certificate.pfx';
 const pfxPassword = 'M4s72aKalo';
 
 // Opciones de HTTPS incluyendo el archivo .pfx y la contraseña
@@ -234,5 +237,11 @@ httpsServer.listen(port, () => {
 });
 
 fetchNifForPeticiones()
-    .then(updateXML)
+    .then(data => {
+        if (data) {
+            updateXMLxTitular(data);
+        } else {
+            console.log("No hay solicitudes por titular sin tramitar.");
+        }
+    })
     .catch(console.error);

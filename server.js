@@ -77,16 +77,80 @@ async function updateXMLxTitular(data) {
             throw err;
         }
 
-        // Actualizar el NIF en el XML
+        // Actualizar el NIF en el XML y guarda el archivo
         result['corpme-floti'].peticiones[0].peticion[0].titular[0].nif[0] = nifTitular;
-
         const newXml = builder.buildObject(result);
         fs.writeFileSync(`./xml/peticion_x_titular ${idPeticion}.xml`, newXml);
-        console.log('Archivo XML actualizado correctamente.');
+
+        // Envía el archivo XML
+        const options = {
+            method: 'POST',
+            headers: { 'Content-Type': 'text/xml' },
+            datasent: newXml,
+            url: 'https://test.registradores.org/xmlpeticion',
+        };
+
+        try {
+
+            // const response = await instance(options);
+
+            if (response.data) {
+
+                // Guardar la respuesta en un archivo XML
+                fs.writeFile('./xml/acuseRecibido.xml', response.data, (err) => {
+                    if (err) {
+                        console.error('Error al guardar el archivo:', err);
+                        res.status(500).send('Error al guardar el archivo');
+                        return;
+                    }
+                });
+
+                // Parsear el XML del acuse de recibo
+                xml2js.parseString(response.data, (err, result) => {
+                    if (err) {
+                        // Manejar errores de parseo
+                        console.error('Error al parsear el XML:', err);
+                        return;
+                    }
+
+                    // Imprimir los campos del XML en la consola
+                    console.log('Acuse de Recibo:', result);
+                    
+                    // Extraer los campos deseados
+                    const entidad = result['corpme-floti'].acuses[0].credenciales[0].entidad[0];
+                    const email = result['corpme-floti'].acuses[0].credenciales[0].email[0];
+                    const identificador = result['corpme-floti'].acuses[0].acuse[0].identificador[0];
+
+                    // Aquí puedes acceder a campos específicos del XML
+                    // Por ejemplo: console.log(result.nombreDelCampo);
+                    // Enviar una confirmación o la respuesta al cliente
+                    console.log("El valor de la variable es: " + entidad);
+                    console.log("El valor de la variable es: " + email);
+                    console.log("El valor de la variable es: " + identificador);
+
+                    res.send(`
+                        <!DOCTYPE html>
+                        <html lang="es">
+                        <head>
+                            <title>Acuse de Recibo Guardado</title>
+                            <!-- Incluir aquí cualquier CSS o metadatos -->
+                        </head>
+                        <body>
+                            <div class="container">
+                                <h2>Acuse del Colegio de Registradores Guardado</h2>
+                                <p>El acuse ha sido guardado exitosamente en un archivo XML.</p>
+                            </div>
+                        </body>
+                        </html>
+                    `);
+                });
+            }
+
+        } catch (error) {
+            console.error('Error al enviar el archivo:', error);
+        }
     });
 }
-
-
 
 // Ruta principal para servir la página HTML
 app.get('/', (req, res) => {

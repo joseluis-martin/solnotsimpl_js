@@ -68,7 +68,7 @@ async function fetchNifForPeticiones() {
     }
 }
 
-async function updateXMLxTitular(data) {
+async function sendXMLxTitular(data) {
     const {nifTitular, idPeticion } = data;
     const xml = fs.readFileSync('./xml/peticion_x_titular.xml', 'utf-8');
 
@@ -243,7 +243,7 @@ httpsServer.listen(port, () => {
 fetchNifForPeticiones()
     .then(data => {
         if (data) {
-            updateXMLxTitular(data);
+            sendXMLxTitular(data);
         } else {
             console.log("No hay solicitudes por titular sin tramitar.");
         }

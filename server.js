@@ -97,7 +97,7 @@ async function updateXMLxTitular(data) {
             if (response.data) {
 
                 // Guardar la respuesta en un archivo XML
-                fs.writeFile('./xml/acuseRecibido.xml', response.data, (err) => {
+                fs.writeFile(`./xml/acuseRecibido.xml ${idPeticion}`, response.data, (err) => {
                     if (err) {
                         console.error('Error al guardar el archivo:', err);
                         res.status(500).send('Error al guardar el archivo');
@@ -112,37 +112,9 @@ async function updateXMLxTitular(data) {
                         console.error('Error al parsear el XML:', err);
                         return;
                     }
-
-                    // Imprimir los campos del XML en la consola
-                    console.log('Acuse de Recibo:', result);
-                    
-                    // Extraer los campos deseados
-                    const entidad = result['corpme-floti'].acuses[0].credenciales[0].entidad[0];
-                    const email = result['corpme-floti'].acuses[0].credenciales[0].email[0];
-                    const identificador = result['corpme-floti'].acuses[0].acuse[0].identificador[0];
-
-                    // Aquí puedes acceder a campos específicos del XML
-                    // Por ejemplo: console.log(result.nombreDelCampo);
-                    // Enviar una confirmación o la respuesta al cliente
-                    console.log("El valor de la variable es: " + entidad);
-                    console.log("El valor de la variable es: " + email);
-                    console.log("El valor de la variable es: " + identificador);
-
-                    res.send(`
-                        <!DOCTYPE html>
-                        <html lang="es">
-                        <head>
-                            <title>Acuse de Recibo Guardado</title>
-                            <!-- Incluir aquí cualquier CSS o metadatos -->
-                        </head>
-                        <body>
-                            <div class="container">
-                                <h2>Acuse del Colegio de Registradores Guardado</h2>
-                                <p>El acuse ha sido guardado exitosamente en un archivo XML.</p>
-                            </div>
-                        </body>
-                        </html>
-                    `);
+                    else{
+                        handleReceipt(result, idPeticion);
+                    }
                 });
             }
 
@@ -150,6 +122,45 @@ async function updateXMLxTitular(data) {
             console.error('Error al enviar el archivo:', error);
         }
     });
+}
+
+async function handleReceipt(receipt, idPeticion) {
+    // Suponemos que estamos tratando con un solo acuse
+    const acuse = receipt['corpme-floti']['acuses'][0]['acuse'][0];
+
+    // Verificar si hay un error en el acuse
+    if (acuse['error']) {
+        console.log('Error detectado en el acuse de recibo:', acuse['error'][0]);
+        // Actualizar el estado a 3 si hay error
+        try {
+            await sql.connect(config);
+            await sql.query`UPDATE peticiones SET idEstado = 3 WHERE idPeticion = ${idPeticion}`;
+            console.log(`Estado actualizado a 3 para idPeticion ${idPeticion}`);
+        } catch (err) {
+            console.error('Error al actualizar el estado en la base de datos:', err);
+        } finally {
+            await sql.close();
+        }
+    } else {
+        // Si no hay error, actualizamos el estado a 1 y procesamos identificadores
+        try {
+            await sql.connect(config);
+            await sql.query`UPDATE peticiones SET idEstado = 1 WHERE idPeticion = ${idPeticion}`;
+            console.log(`Estado actualizado a 1 para idPeticion ${idPeticion}`);
+
+            // Procesar cada identificador (si hay varios, sería acuse['identificador'].forEach(...))
+            if (acuse['identificador']) {
+                for (const identificador of acuse['identificador']) {
+                    await sql.query`INSERT INTO notasRecibidas (idCorpme, idPeticion) VALUES (${identificador}, ${idPeticion})`;
+                    console.log(`Registro creado en notasRecibidas con idCorpme: ${identificador} y idPeticion: ${idPeticion}`);
+                }
+            }
+        } catch (err) {
+            console.error('Error al realizar operaciones en la base de datos:', err);
+        } finally {
+            await sql.close();
+        }
+    }
 }
 
 // Ruta principal para servir la página HTML

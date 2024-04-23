@@ -93,7 +93,7 @@ async function sendXMLxTitular(data) {
 
         try {
 
-            // const response = await instance(options);
+             const response = await instance(options);
 
             if (response.data) {
 

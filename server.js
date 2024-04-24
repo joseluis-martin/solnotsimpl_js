@@ -165,9 +165,9 @@ async function handleReceipt(receipt, idPeticion) {
 }
 
 // Ruta principal para servir la página HTML
-app.get('/', (req, res) => {
-    res.sendFile(path.join(__dirname, '/public/index.html'));
-});
+//app.get('/', (req, res) => {
+//    res.sendFile(path.join(__dirname, '/public/index.html'));
+//});
 
 app.post('/spnts', async (req, res) => {
     console.log('Tipo de Contenido:', req.headers['content-type']);
@@ -192,8 +192,24 @@ app.post('/spnts', async (req, res) => {
             if (informacion && informacion.fichero && informacion.fichero.length > 0) {
                 ficheroPdfBase64 = informacion.fichero[0]['_']; // Suponiendo que es un elemento de texto
                 // Aquí puedes decodificar el Base64 y guardar el PDF si es necesario
-            }
+            
+                // Conectar a la base de datos y guardar el PDF
+                try {
+                    await sql.connect(config);
+                    const query = `UPDATE peticiones SET pdf = @pdf WHERE idCorpme = @idCorpme`;
+                    const request = new sql.Request();
+                    request.input('pdf', sql.VarChar(sql.MAX), ficheroPdfBase64);
+                    request.input('idCorpme', sql.Int, identificador);
+                    await request.query(query);
 
+                    console.log('PDF guardado en la base de datos exitosamente.');
+                } catch (err) {
+                    console.error('Error al guardar en la base de datos:', err);
+                    res.status(500).send('Error al guardar el PDF en la base de datos');
+                    return;
+                }
+            }
+            
             const pdfBuffer = Buffer.from(ficheroPdfBase64, 'base64');
             const pdfFilePath = './pdf/NotaSimple.pdf';
             fs.writeFile(pdfFilePath, pdfBuffer, (err) => {

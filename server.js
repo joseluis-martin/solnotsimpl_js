@@ -131,12 +131,14 @@ async function handleReceipt(receipt, idPeticion) {
 
     // Verificar si hay un error en el acuse
     if (acuse['error']) {
-        console.log('Error detectado en el acuse de recibo:', acuse['error'][0]);
-        // Actualizar el estado a 3 si hay error
+        const codigo =  acuse['error'][0]['codigo'][0];
+        console.log('Error detectado en el acuse de recibo:', acuse['error'][0]['codigo'][0]);
+        // Actualizar el estado a 3 si hay error y poner el codigo de error
         try {
             await sql.connect(config);
-            await sql.query`UPDATE peticiones SET idEstado = 3 WHERE idPeticion = ${idPeticion}`;
+            await sql.query`UPDATE peticiones SET idEstado = 3, idError = ${codigo} WHERE idPeticion = ${idPeticion}`;
             console.log(`Estado actualizado a 3 para idPeticion ${idPeticion}`);
+
         } catch (err) {
             console.error('Error al actualizar el estado en la base de datos:', err);
         } finally {
@@ -152,8 +154,8 @@ async function handleReceipt(receipt, idPeticion) {
             // Procesar cada identificador (si hay varios, sería acuse['identificador'].forEach(...))
             if (acuse['identificador']) {
                 for (const identificador of acuse['identificador']) {
-                    await sql.query`INSERT INTO notasRecibidas (idCorpme, idPeticion) VALUES (${identificador}, ${idPeticion})`;
-                    console.log(`Registro creado en notasRecibidas con idCorpme: ${identificador} y idPeticion: ${idPeticion}`);
+                   // await sql.query`INSERT INTO notasRecibidas (idCorpme, idPeticion) VALUES (${identificador}, ${idPeticion})`;
+                   // console.log(`Registro creado en notasRecibidas con idCorpme: ${identificador} y idPeticion: ${idPeticion}`);
                 }
             }
         } catch (err) {
@@ -196,7 +198,7 @@ app.post('/spnts', async (req, res) => {
                 // Conectar a la base de datos y guardar el PDF
                 try {
                     await sql.connect(config);
-                    const query = `UPDATE peticiones SET pdf = @pdf WHERE idCorpme = @idCorpme`;
+                    const query = `UPDATE peticiones SET pdf = @pdf, IdEstado = 4 WHERE idCorpme = @idCorpme`;
                     const request = new sql.Request();
                     
                     // Convertir el base64 a un buffer binario
@@ -207,38 +209,44 @@ app.post('/spnts', async (req, res) => {
                     request.input('idCorpme', sql.VarChar(50), identificador);
                     await request.query(query);
                     
+                    //PARA GUARDAR EL PDF EN UNA CARPETA Y EL PATH EN LA BBDD
+
+                    // Hay que cambiar el tipo de la celda pdf a varChar
+
+                    // Convertir el base64 a un buffer binario
+                    //const pdfBuffer = Buffer.from(ficheroPdfBase64, 'base64');
+                    //const pdfFilePath = path.join(__dirname, 'pdf', `${identificador}.pdf`);
+
+                    // Guardar el PDF en el sistema de archivos
+                    // await fs.writeFile(pdfFilePath, pdfBuffer);
+
+                    // Guardar la ruta del archivo en la base de datos
+                    //const query = `UPDATE peticiones SET pdf = @pdf WHERE idCorpme = @idCorpme`;
+                    //const request = new sql.Request();
+                    //.input('pdf', sql.NVarChar(255), pdfFilePath);
+                    //request.input('idCorpme', sql.VarChar(50), identificador);
+                    //await request.query(query);
 
                     console.log('PDF guardado en la base de datos exitosamente.');
+
+                    // Leer el XML de confirmación
+                    const confirmacionXml = fs.readFileSync(path.join(__dirname, 'xml/corpme_floti_ok.xml'), 'utf8');
+
+                    // Establecer el tipo de contenido y enviar el XML de confirmación
+                    res.set('Content-Type', 'text/xml');
+                    res.send(confirmacionXml);
+
                 } catch (err) {
                     console.error('Error al guardar en la base de datos:', err);
                     res.status(500).send('Error al guardar el PDF en la base de datos');
                     return;
                 }
             }
-            
-            const pdfBuffer = Buffer.from(ficheroPdfBase64, 'base64');
-            const pdfFilePath = './pdf/NotaSimple.pdf';
-            fs.writeFile(pdfFilePath, pdfBuffer, (err) => {
-                if (err) {
-                    console.error('Error al guardar el archivo PDF:', err);
-                    res.status(500).send('Error al guardar el archivo PDF');
-                    return;
-                }
-            });
-
-            //console.log(identificador +' '+ referencia +' '+ fechaHora);
-       // Leer el XML de confirmación
-       const confirmacionXml = fs.readFileSync(path.join(__dirname, 'xml/corpme_floti_ok.xml'), 'utf8');
-
-       // Establecer el tipo de contenido y enviar el XML de confirmación
-       res.set('Content-Type', 'text/xml');
-       res.send(confirmacionXml);
 
         } else {
             res.status(400).send('Formato de XML inválido o datos faltantes');
         }
 
- 
 
     } catch (error) {
         console.error(error);
@@ -262,12 +270,12 @@ httpsServer.listen(port, () => {
     console.log(`Servidor escuchando en https://localhost:${port}`);
 });
 
-// fetchNifForPeticiones()
-//    .then(data => {
-//        if (data) {
-//            sendXMLxTitular(data);
-//        } else {
-//            console.log("No hay solicitudes por titular sin tramitar.");
-//        }
-//    })
-//    .catch(console.error);
+fetchNifForPeticiones()
+   .then(data => {
+        if (data) {
+            sendXMLxTitular(data);
+        } else {
+            console.log("No hay solicitudes por titular sin tramitar.");
+        }
+    })
+    .catch(console.error);

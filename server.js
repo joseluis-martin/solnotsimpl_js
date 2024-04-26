@@ -39,91 +39,74 @@ const config = {
 };
 
 async function fetchNifForPeticiones() {
+    let resultados = [];  // Crear un array para almacenar los resultados
     try {
         await sql.connect(config);
         const peticiones = await sql.query`SELECT idPeticion FROM peticiones WHERE idEstado = 0`;
-
-        // Recorrer cada peticion encontrada
+        
+        // Recorrer cada petición encontrada
         for (let i = 0; i < peticiones.recordset.length; i++) {
             const idPeticion = peticiones.recordset[i].idPeticion;
             const datosSolicitud = await sql.query`SELECT * FROM datosSolicitud WHERE idPeticion = ${idPeticion}`;
 
-            // Si idTipoSolicitud es 1, devolvemos el nifTitular y el idPeticion
+            // Si idTipoSolicitud es 1, almacenamos el nifTitular y el idPeticion en el array
             if (datosSolicitud.recordset.length > 0 && datosSolicitud.recordset[0].idTipoSolicitud === 1) {
-                return {
+                resultados.push({
                     nifTitular: datosSolicitud.recordset[0].nifTitular,
                     idPeticion: idPeticion
-                };
+                });
             }
         }
 
-        // Si no se encontraron registros válidos o el bucle ha terminado sin retornar
-        console.log("No se encontraron registros válidos o el idTipoSolicitud no es 1.");
-        return null;  // Devolvemos null para indicar que no hay acción a realizar
+        // Verificar si se encontraron resultados
+        if (resultados.length > 0) {
+            console.log("Resultados encontrados:", resultados);
+            return resultados;  // Devolver el array de resultados
+        } else {
+            console.log("No se encontraron registros válidos o el idTipoSolicitud no es 1.");
+            return null;  // Devolver null si no se encontraron resultados válidos
+        }
     } catch (err) {
         console.error('Error en la base de datos:', err);
-        throw err;  // Considera si quieres realmente lanzar el error o simplemente loguearlo
+        throw err;  // Lanzar el error
     } finally {
-        await sql.close();
+        await sql.close();  // Asegurar que la conexión se cierre
     }
 }
 
-async function sendXMLxTitular(data) {
-    const {nifTitular, idPeticion } = data;
-    const xml = fs.readFileSync('./xml/peticion_x_titular.xml', 'utf-8');
-
-    xml2js.parseString(xml, async (err, result) => {
-        if (err) {
-            throw err;
-        }
-
-        // Actualizar el NIF en el XML y guarda el archivo
-        result['corpme-floti'].peticiones[0].peticion[0].titular[0].nif[0] = nifTitular;
-        const newXml = builder.buildObject(result);
-        fs.writeFileSync(`./xml/peticion_x_titular ${idPeticion}.xml`, newXml);
-
-        // Envía el archivo XML
-        const options = {
-            method: 'POST',
-            headers: { 'Content-Type': 'text/xml' },
-            datasent: newXml,
-            url: 'http://localhost:3000/xmlpeticion',
-            // url: 'https://test.registradores.org/xmlpeticion',
-        };
+async function sendXMLxTitular(resultados) {
+    for (let data of resultados) {
+        console.log(data);
+        const { nifTitular, idPeticion } = data;
+        const xml = fs.readFileSync('./xml/peticion_x_titular.xml', 'utf-8');
 
         try {
+            const parsedXml = await xml2js.parseStringPromise(xml);
+            parsedXml['corpme-floti'].peticiones[0].peticion[0].titular[0].nif[0] = nifTitular;
+            const newXml = builder.buildObject(parsedXml);
+            fs.writeFileSync(`./xml/peticion_x_titular_${idPeticion}.xml`, newXml);
 
-             const response = await instance(options);
+            const options = {
+                method: 'POST',
+                headers: { 'Content-Type': 'text/xml' },
+                data: newXml,
+                url: 'http://localhost:3000/xmlpeticion',
+                 // url: 'https://test.registradores.org/xmlpeticion',
+            };
 
+            const response = await axios(options);
             if (response.data) {
-
-                // Guardar la respuesta en un archivo XML
-                fs.writeFile(`./xml/acuseRecibido.xml ${idPeticion}`, response.data, (err) => {
-                    if (err) {
-                        console.error('Error al guardar el archivo:', err);
-                        res.status(500).send('Error al guardar el archivo');
-                        return;
-                    }
-                });
-
-                // Parsear el XML del acuse de recibo
-                xml2js.parseString(response.data, (err, result) => {
-                    if (err) {
-                        // Manejar errores de parseo
-                        console.error('Error al parsear el XML:', err);
-                        return;
-                    }
-                    else{
-                        handleReceipt(result, idPeticion);
-                    }
-                });
+                fs.writeFileSync(`./xml/acuseRecibido_${idPeticion}.xml`, response.data);
+                const receiptXml = await xml2js.parseStringPromise(response.data);
+                handleReceipt(receiptXml, idPeticion);
             }
-
         } catch (error) {
-            console.error('Error al enviar el archivo:', error);
+            console.error('Error processing request for ID:', idPeticion, error);
         }
-    });
+    }
 }
+
+
 
 async function handleReceipt(receipt, idPeticion) {
     // Suponemos que estamos tratando con un solo acuse

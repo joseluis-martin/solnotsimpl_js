@@ -164,10 +164,10 @@ async function handleReceipt(receipt, idPeticion) {
     }
 }
 
-// Ruta principal para servir la página HTML
-//app.get('/', (req, res) => {
-//    res.sendFile(path.join(__dirname, '/public/index.html'));
-//});
+ // Ruta principal para servir la página HTML
+    app.get('/', (req, res) => {
+    res.sendFile(path.join(__dirname, '/public/index.html'));
+});
 
 app.post('/spnts', async (req, res) => {
     console.log('Tipo de Contenido:', req.headers['content-type']);
@@ -198,9 +198,15 @@ app.post('/spnts', async (req, res) => {
                     await sql.connect(config);
                     const query = `UPDATE peticiones SET pdf = @pdf WHERE idCorpme = @idCorpme`;
                     const request = new sql.Request();
-                    request.input('pdf', sql.VarChar(sql.MAX), ficheroPdfBase64);
-                    request.input('idCorpme', sql.Int, identificador);
+                    
+                    // Convertir el base64 a un buffer binario
+                    const pdfBuffer = Buffer.from(ficheroPdfBase64, 'base64');
+                    
+                    // Añadir el PDF como un parámetro varbinary
+                    request.input('pdf', sql.VarBinary(sql.MAX), pdfBuffer);
+                    request.input('idCorpme', sql.VarChar(50), identificador);
                     await request.query(query);
+                    
 
                     console.log('PDF guardado en la base de datos exitosamente.');
                 } catch (err) {
@@ -220,7 +226,7 @@ app.post('/spnts', async (req, res) => {
                 }
             });
 
-            console.log(identificador +' '+ referencia +' '+ fechaHora);
+            //console.log(identificador +' '+ referencia +' '+ fechaHora);
        // Leer el XML de confirmación
        const confirmacionXml = fs.readFileSync(path.join(__dirname, 'xml/corpme_floti_ok.xml'), 'utf8');
 
@@ -256,12 +262,12 @@ httpsServer.listen(port, () => {
     console.log(`Servidor escuchando en https://localhost:${port}`);
 });
 
-fetchNifForPeticiones()
-    .then(data => {
-        if (data) {
-            sendXMLxTitular(data);
-        } else {
-            console.log("No hay solicitudes por titular sin tramitar.");
-        }
-    })
-    .catch(console.error);
+// fetchNifForPeticiones()
+//    .then(data => {
+//        if (data) {
+//            sendXMLxTitular(data);
+//        } else {
+//            console.log("No hay solicitudes por titular sin tramitar.");
+//        }
+//    })
+//    .catch(console.error);

@@ -26,6 +26,7 @@ app.use(xmlparser());
 // Servir archivos estáticos (HTML, CSS, JS, etc.)
 app.use(express.static('public'));
 
+// Configuración para acceder a la BBDD de tasadores
 const config = {
     user: 'notassimples',  // Usuario de la base de datos
     password: 'akdsuTR54%',  // Contraseña del usuario
@@ -90,11 +91,11 @@ async function sendXMLxTitular(resultados) {
                 method: 'POST',
                 headers: { 'Content-Type': 'text/xml' },
                 data: newXml,
-                url: 'http://localhost:3000/xmlpeticion',
-                 // url: 'https://test.registradores.org/xmlpeticion',
+                //url: 'http://localhost:3000/xmlpeticion',
+                url: 'https://test.registradores.org/xmlpeticion',
             };
 
-            const response = await axios(options);
+            const response = await instance(options);
             if (response.data) {
                 fs.writeFileSync(`./xml/acuseRecibido_${idPeticion}.xml`, response.data);
                 const receiptXml = await xml2js.parseStringPromise(response.data);
@@ -152,6 +153,10 @@ async function handleReceipt(receipt, idPeticion) {
  // Ruta principal para servir la página HTML
     app.get('/', (req, res) => {
     res.sendFile(path.join(__dirname, '/public/index.html'));
+});
+
+app.get('/ping', (req, res) => {
+    res.send('Pong!');
 });
 
 app.post('/spnts', async (req, res) => {

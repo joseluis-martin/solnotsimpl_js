@@ -14,8 +14,6 @@ app.post('/xmlpeticion', (req, res) => {
         <acuses id="acuses">
             <acuse>
                 <identificador>Z16TF84T</identificador>
-                <identificador>A24DF56H</identificador>
-                <identificador>G78JK90L</identificador>
                 <!-- Descomentar la siguiente línea para simular un error -->
                 <!-- <error>7</error> -->
             </acuse>
@@ -40,7 +38,7 @@ app.post('/xmlpeticion', (req, res) => {
         </corpme-floti>
         `;
     
-    res.send(acuseXMLconError);  // Envía el acuse de recibo XML
+    res.send(acuseXML);  // Envía el acuse de recibo XML
 });
 
 app.listen(port, () => {

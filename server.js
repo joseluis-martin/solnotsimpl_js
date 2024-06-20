@@ -40,7 +40,7 @@ const config = {
     }
 };
 
-async function fetchNifForPeticiones() {
+async function fetchPendingRequests() {
     let resultadosTitular = [];  // Crear un array para almacenar las solicitudes por titular
     let resultadosIDUFIR = [];  // Crear un array para almacenar las solicitudes por IDUFIR
     try {
@@ -60,7 +60,7 @@ async function fetchNifForPeticiones() {
                 });
             }
             // Si idTipoSolicitud es 3, almacenamos el IDUFIR y el idPeticion en el array
-            else if (datosSolicitud.recordset.length > 0 && datosSolicitud.recordset[0].idTipoSolicitud === 3) {
+            else if (datosSolicitud.recordset.length > 0 && datosSolicitud.recordset[0].idTipoSolicitud === 2) {
                 resultadosIDUFIR.push({
                     IDUFIR: datosSolicitud.recordset[0].IDUFIR,
                     idPeticion: idPeticion
@@ -134,7 +134,46 @@ async function sendXMLxTitular(resultados) {
     }
 }
 
+async function sendXMLxIDUFIR(resultados) {
+    for (let data of resultados) {
+        console.log(data);
+        const { IDUFIR, idPeticion } = data;
+        const xml = fs.readFileSync('./xml/peticion_x_idufir.xml', 'utf-8');
 
+        try {
+            const parsedXml = await xml2js.parseStringPromise(xml);
+            parsedXml['corpme-floti'].peticiones[0].peticion[0].idufir[0] = IDUFIR;
+            const newXml = builder.buildObject(parsedXml);
+            fs.writeFileSync(`./xml/peticion_x_idufir_${idPeticion}.xml`, newXml);
+
+            const options = {
+                method: 'POST',
+                headers: { 'Content-Type': 'text/xml' },
+                data: newXml,
+                //url: 'http://localhost:3000/xmlpeticion',
+                url: 'https://test.registradores.org/xmlpeticion',
+            };
+
+            const response = await instance(options);
+            if (response.data) {
+                fs.writeFileSync(`./xml/acuseRecibido_${idPeticion}.xml`, response.data);
+                const receiptXml = await xml2js.parseStringPromise(response.data);
+                handleReceipt(receiptXml, idPeticion);
+            }
+        } catch (error) {
+            if (error.code === 'ECONNABORTED') {
+                console.error('Timeout: La solicitud fue abortada debido a un exceso de tiempo de espera para el ID:', idPeticion);
+            } else if (error.response) {
+                console.error('Error de respuesta del servidor para ID:', idPeticion, 'Código de estado:', error.response.status);
+            } else if (error.request) {
+                console.error('No se recibió respuesta para la solicitud del ID:', idPeticion);
+            } else {
+                console.error('Error configurando la solicitud para ID:', idPeticion);
+            }
+            console.error('Información del error:', error.message);  // Mensaje general del error
+        }
+    }
+}
 
 async function handleReceipt(receipt, idPeticion) {
     // Suponemos que estamos tratando con un solo acuse
@@ -285,12 +324,17 @@ httpsServer.listen(port, () => {
     console.log(`Servidor escuchando en https://localhost:${port}`);
 });
 
-fetchNifForPeticiones()
-   .then(data => {
+fetchPendingRequests()
+    .then(data => {
         if (data) {
-            sendXMLxTitular(data);
+            if (data.resultadosTitular.length > 0) {
+                sendXMLxTitular(data.resultadosTitular);
+            }
+            if (data.resultadosIDUFIR.length > 0) {
+                sendXMLxIDUFIR(data.resultadosIDUFIR);
+            }
         } else {
-            console.log("No hay solicitudes por titular sin tramitar.");
+            console.log("No hay solicitudes sin tramitar.");
         }
     })
     .catch(console.error);

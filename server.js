@@ -15,7 +15,8 @@ const sql = require('mssql');
 const instance = axios.create({
     httpsAgent: new https.Agent({  
         rejectUnauthorized: false // Desactiva la validación de certificados
-    })
+    }),
+    timeout: 10000  // Timeout de 5000 ms (5 segundos)
 });
 
 // Middleware para parsear JSON en las respuestas entrantes
@@ -40,7 +41,8 @@ const config = {
 };
 
 async function fetchNifForPeticiones() {
-    let resultados = [];  // Crear un array para almacenar los resultados
+    let resultadosTitular = [];  // Crear un array para almacenar las solicitudes por titular
+    let resultadosIDUFIR = [];  // Crear un array para almacenar las solicitudes por IDUFIR
     try {
         await sql.connect(config);
         const peticiones = await sql.query`SELECT idPeticion FROM peticiones WHERE idEstado = 0`;
@@ -52,21 +54,34 @@ async function fetchNifForPeticiones() {
 
             // Si idTipoSolicitud es 1, almacenamos el nifTitular y el idPeticion en el array
             if (datosSolicitud.recordset.length > 0 && datosSolicitud.recordset[0].idTipoSolicitud === 1) {
-                resultados.push({
+                resultadosTitular.push({
                     nifTitular: datosSolicitud.recordset[0].nifTitular,
+                    idPeticion: idPeticion
+                });
+            }
+            // Si idTipoSolicitud es 3, almacenamos el IDUFIR y el idPeticion en el array
+            else if (datosSolicitud.recordset.length > 0 && datosSolicitud.recordset[0].idTipoSolicitud === 3) {
+                resultadosIDUFIR.push({
+                    IDUFIR: datosSolicitud.recordset[0].IDUFIR,
                     idPeticion: idPeticion
                 });
             }
         }
 
-        // Verificar si se encontraron resultados
-        if (resultados.length > 0) {
-            console.log("Resultados encontrados:", resultados);
-            return resultados;  // Devolver el array de resultados
+         // Verificar si se encontraron resultados
+         if (resultadosTitular.length > 0) {
+            console.log("Resultados de titulares encontrados:", resultadosTitular);
         } else {
-            console.log("No se encontraron registros válidos o el idTipoSolicitud no es 1.");
-            return null;  // Devolver null si no se encontraron resultados válidos
+            console.log("No se encontraron registros válidos para titulares o el idTipoSolicitud no es 1.");
         }
+
+        if (resultadosIDUFIR.length > 0) {
+            console.log("Resultados de IDUFIR encontrados:", resultadosIDUFIR);
+        } else {
+            console.log("No se encontraron registros válidos para IDUFIR o el idTipoSolicitud no es 3.");
+        }
+
+        return { resultadosTitular, resultadosIDUFIR };  // Devolver ambos arrays de resultados
     } catch (err) {
         console.error('Error en la base de datos:', err);
         throw err;  // Lanzar el error
@@ -102,7 +117,19 @@ async function sendXMLxTitular(resultados) {
                 handleReceipt(receiptXml, idPeticion);
             }
         } catch (error) {
-            console.error('Error processing request for ID:', idPeticion, error);
+            if (error.code === 'ECONNABORTED') {
+                console.error('Timeout: La solicitud fue abortada debido a un exceso de tiempo de espera para el ID:', idPeticion);
+            } else if (error.response) {
+                // El servidor respondió con un código de estado fuera del rango 2xx
+                console.error('Error de respuesta del servidor para ID:', idPeticion, 'Código de estado:', error.response.status);
+            } else if (error.request) {
+                // La solicitud fue hecha pero no se recibió respuesta
+                console.error('No se recibió respuesta para la solicitud del ID:', idPeticion);
+            } else {
+                // Algo ocurrió al configurar la solicitud que disparó un error
+                console.error('Error configurando la solicitud para ID:', idPeticion);
+            }
+            console.error('Información del error:', error.message);  // Mensaje general del error
         }
     }
 }
@@ -138,8 +165,8 @@ async function handleReceipt(receipt, idPeticion) {
             // Procesar cada identificador (si hay varios, sería acuse['identificador'].forEach(...))
             if (acuse['identificador']) {
                 for (const identificador of acuse['identificador']) {
-                   // await sql.query`INSERT INTO notasRecibidas (idCorpme, idPeticion) VALUES (${identificador}, ${idPeticion})`;
-                   // console.log(`Registro creado en notasRecibidas con idCorpme: ${identificador} y idPeticion: ${idPeticion}`);
+                    await sql.query`UPDATE peticiones SET idCorpme = ${identificador} WHERE idPeticion = ${idPeticion}`;
+                    console.log(`Identificador actualizado a ${identificador} para idPeticion ${idPeticion}`); 
                 }
             }
         } catch (err) {

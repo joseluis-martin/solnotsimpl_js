@@ -43,11 +43,13 @@ const config = {
 async function fetchPendingRequests() {
     let resultadosTitular = [];  // Crear un array para almacenar las solicitudes por titular
     let resultadosIDUFIR = [];  // Crear un array para almacenar las solicitudes por IDUFIR
+    let resultadosFinca = [];  // Crear un array para almacenar los resultados de finca
+
     try {
         await sql.connect(config);
         const peticiones = await sql.query`SELECT idPeticion FROM peticiones WHERE idEstado = 0`;
         
-        // Recorrer cada petición encontrada
+       // Recorrer cada petición encontrada
         for (let i = 0; i < peticiones.recordset.length; i++) {
             const idPeticion = peticiones.recordset[i].idPeticion;
             const datosSolicitud = await sql.query`SELECT * FROM datosSolicitud WHERE idPeticion = ${idPeticion}`;
@@ -60,16 +62,27 @@ async function fetchPendingRequests() {
                 });
             }
             // Si idTipoSolicitud es 3, almacenamos el IDUFIR y el idPeticion en el array
-            else if (datosSolicitud.recordset.length > 0 && datosSolicitud.recordset[0].idTipoSolicitud === 2) {
+            else if (datosSolicitud.recordset.length > 0 && datosSolicitud.recordset[0].idTipoSolicitud === 3) {
                 resultadosIDUFIR.push({
                     IDUFIR: datosSolicitud.recordset[0].IDUFIR,
                     idPeticion: idPeticion
                 });
             }
+            // Si idTipoSolicitud es 0, almacenamos los datos de finca en el array
+            else if (datosSolicitud.recordset.length > 0 && datosSolicitud.recordset[0].idTipoSolicitud === 0) {
+                resultadosFinca.push({
+                    codigoRegistro: datosSolicitud.recordset[0].codigoRegistro,
+                    municipio: datosSolicitud.recordset[0].municipio,
+                    provincia: datosSolicitud.recordset[0].provincia,
+                    seccion: datosSolicitud.recordset[0].seccion,
+                    finca: datosSolicitud.recordset[0].finca,
+                    idPeticion: idPeticion
+                });
+            }
         }
 
-         // Verificar si se encontraron resultados
-         if (resultadosTitular.length > 0) {
+        // Verificar si se encontraron resultados
+        if (resultadosTitular.length > 0) {
             console.log("Resultados de titulares encontrados:", resultadosTitular);
         } else {
             console.log("No se encontraron registros válidos para titulares o el idTipoSolicitud no es 1.");
@@ -81,7 +94,13 @@ async function fetchPendingRequests() {
             console.log("No se encontraron registros válidos para IDUFIR o el idTipoSolicitud no es 3.");
         }
 
-        return { resultadosTitular, resultadosIDUFIR };  // Devolver ambos arrays de resultados
+        if (resultadosFinca.length > 0) {
+            console.log("Resultados de finca encontrados:", resultadosFinca);
+        } else {
+            console.log("No se encontraron registros válidos para finca o el idTipoSolicitud no es 0.");
+        }
+
+        return { resultadosTitular, resultadosIDUFIR, resultadosFinca };  // Devolver todos los arrays de resultados
     } catch (err) {
         console.error('Error en la base de datos:', err);
         throw err;  // Lanzar el error
@@ -175,30 +194,78 @@ async function sendXMLxIDUFIR(resultados) {
     }
 }
 
+async function sendXMLxFinca(resultados) {
+    for (let data of resultados) {
+        console.log(data);
+        const { codigoRegistro, municipio, provincia, seccion, finca, idPeticion } = data;
+        const xml = fs.readFileSync('./xml/peticion_x_finca.xml', 'utf-8');
+
+        try {
+            const parsedXml = await xml2js.parseStringPromise(xml);
+            parsedXml['corpme-floti'].peticiones[0].peticion[0]['datos-registrales'][0].registro[0] = codigoRegistro;
+            parsedXml['corpme-floti'].peticiones[0].peticion[0]['datos-registrales'][0].municipio[0] = municipio;
+            parsedXml['corpme-floti'].peticiones[0].peticion[0]['datos-registrales'][0].provincia[0] = provincia;
+            parsedXml['corpme-floti'].peticiones[0].peticion[0]['datos-registrales'][0].seccion[0] = seccion;
+            parsedXml['corpme-floti'].peticiones[0].peticion[0]['datos-registrales'][0].finca[0] = finca;
+        
+
+            const newXml = builder.buildObject(parsedXml);
+            fs.writeFileSync(`./xml/peticion_x_finca_${idPeticion}.xml`, newXml);
+
+            const options = {
+                method: 'POST',
+                headers: { 'Content-Type': 'text/xml' },
+                data: newXml,
+                //url: 'http://localhost:3000/xmlpeticion',
+                url: 'https://test.registradores.org/xmlpeticion',
+            };
+
+            const response = await instance(options);
+            if (response.data) {
+                fs.writeFileSync(`./xml/acuseRecibido_${idPeticion}.xml`, response.data);
+                const receiptXml = await xml2js.parseStringPromise(response.data);
+                handleReceipt(receiptXml, idPeticion);
+            }
+        } catch (error) {
+            if (error.code === 'ECONNABORTED') {
+                console.error('Timeout: La solicitud fue abortada debido a un exceso de tiempo de espera para el ID:', idPeticion);
+            } else if (error.response) {
+                console.error('Error de respuesta del servidor para ID:', idPeticion, 'Código de estado:', error.response.status);
+            } else if (error.request) {
+                console.error('No se recibió respuesta para la solicitud del ID:', idPeticion);
+            } else {
+                console.error('Error configurando la solicitud para ID:', idPeticion);
+            }
+            console.error('Información del error:', error.message);  // Mensaje general del error
+        }
+    }
+}
+
 async function handleReceipt(receipt, idPeticion) {
     // Suponemos que estamos tratando con un solo acuse
-    const acuse = receipt['corpme-floti']['acuses'][0]['acuse'][0];
 
-    // Verificar si hay un error en el acuse
-    if (acuse['error']) {
-        const codigo =  acuse['error'][0]['codigo'][0];
-        console.log('Error detectado en el acuse de recibo:', acuse['error'][0]['codigo'][0]);
-        // Actualizar el estado a 3 si hay error y poner el codigo de error
-        try {
-            await sql.connect(config);
-            await sql.query`UPDATE peticiones SET idEstado = 3, idError = ${codigo} WHERE idPeticion = ${idPeticion}`;
-            console.log(`Estado actualizado a 3 para idPeticion ${idPeticion}`);
+   // Verificar si la respuesta contiene un error
+   if (receipt && receipt['corpme-floti'] && receipt['corpme-floti'].error) {
+    // Extraer el código de error
+    const codigo = receipt['corpme-floti'].error[0]['$'].codigo;
+    console.error(`Error en el XML recibido para ID ${idPeticion}: ${receipt['corpme-floti'].error[0]['_']} (Código ${codigo})`);
 
-        } catch (err) {
-            console.error('Error al actualizar el estado en la base de datos:', err);
-        } finally {
-            await sql.close();
-        }
+    try {
+        // Conectar a la base de datos y actualizar el estado y el código de error
+        await sql.connect(config);
+        await sql.query`UPDATE peticiones SET idEstado = 3, idError = ${codigo} WHERE idPeticion = ${idPeticion}`;
+        console.log(`Estado actualizado a 3 y error registrado para idPeticion ${idPeticion}`);
+    } catch (dbError) {
+        console.error('Error al actualizar la base de datos:', dbError);
+    } finally {
+        // Asegurarse de cerrar la conexión a la base de datos
+        await sql.close();
+    }
     } else {
-        // Si no hay error, actualizamos el estado a 1 y procesamos identificadores
+        const acuse = receipt['corpme-floti']['acuses'][0]['acuse'][0];
         try {
             await sql.connect(config);
-            await sql.query`UPDATE peticiones SET idEstado = 1 WHERE idPeticion = ${idPeticion}`;
+            await sql.query`UPDATE peticiones SET idEstado = 1, idError = NULL WHERE idPeticion = ${idPeticion}`;
             console.log(`Estado actualizado a 1 para idPeticion ${idPeticion}`);
 
             // Procesar cada identificador (si hay varios, sería acuse['identificador'].forEach(...))
@@ -214,6 +281,7 @@ async function handleReceipt(receipt, idPeticion) {
             await sql.close();
         }
     }
+
 }
 
  // Ruta principal para servir la página HTML
@@ -324,17 +392,25 @@ httpsServer.listen(port, () => {
     console.log(`Servidor escuchando en https://localhost:${port}`);
 });
 
-fetchPendingRequests()
-    .then(data => {
-        if (data) {
-            if (data.resultadosTitular.length > 0) {
-                sendXMLxTitular(data.resultadosTitular);
+function runFetchPendingRequests() {
+    fetchPendingRequests()
+        .then(data => {
+            if (data) {
+                if (data.resultadosTitular.length > 0) {
+                    sendXMLxTitular(data.resultadosTitular);
+                }
+                if (data.resultadosIDUFIR.length > 0) {
+                    sendXMLxIDUFIR(data.resultadosIDUFIR);
+                }
+                if (data.resultadosFinca.length > 0) {
+                    sendXMLxFinca(data.resultadosFinca);
+                }
+            } else {
+                console.log("No hay solicitudes sin tramitar.");
             }
-            if (data.resultadosIDUFIR.length > 0) {
-                sendXMLxIDUFIR(data.resultadosIDUFIR);
-            }
-        } else {
-            console.log("No hay solicitudes sin tramitar.");
-        }
-    })
-    .catch(console.error);
+        })
+        .catch(console.error);
+}
+
+    // Configurar la función para ejecutarse cada 10 minutos (600000 milisegundos)
+setInterval(runFetchPendingRequests, 60000);       

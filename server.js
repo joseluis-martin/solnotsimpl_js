@@ -54,22 +54,8 @@ async function fetchPendingRequests() {
             const idPeticion = peticiones.recordset[i].idPeticion;
             const datosSolicitud = await sql.query`SELECT * FROM datosSolicitud WHERE idPeticion = ${idPeticion}`;
 
-            // Si idTipoSolicitud es 1, almacenamos el nifTitular y el idPeticion en el array
-            if (datosSolicitud.recordset.length > 0 && datosSolicitud.recordset[0].idTipoSolicitud === 1) {
-                resultadosTitular.push({
-                    nifTitular: datosSolicitud.recordset[0].nifTitular,
-                    idPeticion: idPeticion
-                });
-            }
-            // Si idTipoSolicitud es 3, almacenamos el IDUFIR y el idPeticion en el array
-            else if (datosSolicitud.recordset.length > 0 && datosSolicitud.recordset[0].idTipoSolicitud === 3) {
-                resultadosIDUFIR.push({
-                    IDUFIR: datosSolicitud.recordset[0].IDUFIR,
-                    idPeticion: idPeticion
-                });
-            }
             // Si idTipoSolicitud es 0, almacenamos los datos de finca en el array
-            else if (datosSolicitud.recordset.length > 0 && datosSolicitud.recordset[0].idTipoSolicitud === 0) {
+            if (datosSolicitud.recordset.length > 0 && datosSolicitud.recordset[0].idTipoSolicitud === 0) {
                 resultadosFinca.push({
                     codigoRegistro: datosSolicitud.recordset[0].codigoRegistro,
                     municipio: datosSolicitud.recordset[0].municipio,
@@ -79,9 +65,31 @@ async function fetchPendingRequests() {
                     idPeticion: idPeticion
                 });
             }
+            // Si idTipoSolicitud es 1, almacenamos el nifTitular y el idPeticion en el array
+            else if (datosSolicitud.recordset.length > 0 && datosSolicitud.recordset[0].idTipoSolicitud === 1) {
+                resultadosTitular.push({
+                    nifTitular: datosSolicitud.recordset[0].nifTitular,
+                    idPeticion: idPeticion
+                });
+            }
+            // Si idTipoSolicitud es 2, almacenamos el IDUFIR y el idPeticion en el array
+            else if (datosSolicitud.recordset.length > 0 && datosSolicitud.recordset[0].idTipoSolicitud === 2) {
+                resultadosIDUFIR.push({
+                    IDUFIR: datosSolicitud.recordset[0].IDUFIR,
+                    idPeticion: idPeticion
+                });
+            }
+
         }
 
         // Verificar si se encontraron resultados
+
+        if (resultadosFinca.length > 0) {
+            console.log("Resultados de finca encontrados:", resultadosFinca);
+        } else {
+            console.log("No se encontraron registros válidos para finca o el idTipoSolicitud no es 0.");
+        }
+
         if (resultadosTitular.length > 0) {
             console.log("Resultados de titulares encontrados:", resultadosTitular);
         } else {
@@ -91,13 +99,7 @@ async function fetchPendingRequests() {
         if (resultadosIDUFIR.length > 0) {
             console.log("Resultados de IDUFIR encontrados:", resultadosIDUFIR);
         } else {
-            console.log("No se encontraron registros válidos para IDUFIR o el idTipoSolicitud no es 3.");
-        }
-
-        if (resultadosFinca.length > 0) {
-            console.log("Resultados de finca encontrados:", resultadosFinca);
-        } else {
-            console.log("No se encontraron registros válidos para finca o el idTipoSolicitud no es 0.");
+            console.log("No se encontraron registros válidos para IDUFIR o el idTipoSolicitud no es 2.");
         }
 
         return { resultadosTitular, resultadosIDUFIR, resultadosFinca };  // Devolver todos los arrays de resultados

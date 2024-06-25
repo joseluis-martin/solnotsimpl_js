@@ -133,6 +133,7 @@ dist
 .DS_Store
 
 #Información confidencial
+winacme/
 certificados/
 uploads/
 xml/

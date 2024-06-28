@@ -1,5 +1,6 @@
 const express = require('express');
 const https = require('https');
+// const http = require('http');
 const fs = require('fs');
 const path = require('path');
 const multer = require('multer');
@@ -10,6 +11,7 @@ const xmlparser = require('express-xml-bodyparser');
 const app = express();
 const upload = multer({ dest: 'uploads/' });
 const port = 5999;
+// const httpPort = 8080;
 const sql = require('mssql');
 
 const instance = axios.create({
@@ -393,6 +395,21 @@ const httpsServer = https.createServer(credentials, app);
 httpsServer.listen(port, () => {
     console.log(`Servidor escuchando en https://localhost:${port}`);
 });
+
+// Servidor HTTP para manejo de desafíos Let's Encrypt
+//const httpApp = express();
+//httpApp.use(express.static('public'));
+
+//httpApp.get('/.well-known/acme-challenge/:content', (req, res) => {
+//    const content = req.params.content;
+//    const filePath = path.join(__dirname, 'public/.well-known/acme-challenge', content);
+//    res.sendFile(filePath);
+//});
+
+//const httpServer = http.createServer(httpApp);
+//httpServer.listen(httpPort, () => {
+//    console.log(`Servidor HTTP escuchando en el puerto ${httpPort} para los desafíos de LetsEncrypt`);
+//});
 
 function runFetchPendingRequests() {
     fetchPendingRequests()

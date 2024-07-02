@@ -11,7 +11,6 @@ const xmlparser = require('express-xml-bodyparser');
 const app = express();
 const upload = multer({ dest: 'uploads/' });
 const port = 5999;
-// const httpPort = 8080;
 const sql = require('mssql');
 
 const instance = axios.create({
@@ -89,19 +88,19 @@ async function fetchPendingRequests() {
         if (resultadosFinca.length > 0) {
             console.log("Resultados de finca encontrados:", resultadosFinca);
         } else {
-            console.log("No se encontraron registros válidos para finca o el idTipoSolicitud no es 0.");
+            //console.log("No se encontraron registros válidos para finca o el idTipoSolicitud no es 0.");
         }
 
         if (resultadosTitular.length > 0) {
             console.log("Resultados de titulares encontrados:", resultadosTitular);
         } else {
-            console.log("No se encontraron registros válidos para titulares o el idTipoSolicitud no es 1.");
+           // console.log("No se encontraron registros válidos para titulares o el idTipoSolicitud no es 1.");
         }
 
         if (resultadosIDUFIR.length > 0) {
             console.log("Resultados de IDUFIR encontrados:", resultadosIDUFIR);
         } else {
-            console.log("No se encontraron registros válidos para IDUFIR o el idTipoSolicitud no es 2.");
+            //console.log("No se encontraron registros válidos para IDUFIR o el idTipoSolicitud no es 2.");
         }
 
         return { resultadosTitular, resultadosIDUFIR, resultadosFinca };  // Devolver todos los arrays de resultados
@@ -115,7 +114,7 @@ async function fetchPendingRequests() {
 
 async function sendXMLxTitular(resultados) {
     for (let data of resultados) {
-        console.log(data);
+        // console.log(data);
         const { nifTitular, idPeticion } = data;
         const xml = fs.readFileSync('./xml/peticion_x_titular.xml', 'utf-8');
 
@@ -159,7 +158,7 @@ async function sendXMLxTitular(resultados) {
 
 async function sendXMLxIDUFIR(resultados) {
     for (let data of resultados) {
-        console.log(data);
+        // console.log(data);
         const { IDUFIR, idPeticion } = data;
         const xml = fs.readFileSync('./xml/peticion_x_idufir.xml', 'utf-8');
 
@@ -200,17 +199,17 @@ async function sendXMLxIDUFIR(resultados) {
 
 async function sendXMLxFinca(resultados) {
     for (let data of resultados) {
-        console.log(data);
+        // console.log(data);
         const { codigoRegistro, municipio, provincia, seccion, finca, idPeticion } = data;
         const xml = fs.readFileSync('./xml/peticion_x_finca.xml', 'utf-8');
 
         try {
             const parsedXml = await xml2js.parseStringPromise(xml);
-            parsedXml['corpme-floti'].peticiones[0].peticion[0]['datos-registrales'][0].registro[0] = codigoRegistro;
-            parsedXml['corpme-floti'].peticiones[0].peticion[0]['datos-registrales'][0].municipio[0] = municipio;
-            parsedXml['corpme-floti'].peticiones[0].peticion[0]['datos-registrales'][0].provincia[0] = provincia;
-            parsedXml['corpme-floti'].peticiones[0].peticion[0]['datos-registrales'][0].seccion[0] = seccion;
-            parsedXml['corpme-floti'].peticiones[0].peticion[0]['datos-registrales'][0].finca[0] = finca;
+            parsedXml['corpme-floti'].peticiones[0].peticion[0]['datos-registrales'][0].registro[0] = parseInt(codigoRegistro, 10);
+            parsedXml['corpme-floti'].peticiones[0].peticion[0]['datos-registrales'][0].municipio[0] = parseInt(municipio, 10);
+            parsedXml['corpme-floti'].peticiones[0].peticion[0]['datos-registrales'][0].provincia[0] = parseInt(provincia, 10);
+            parsedXml['corpme-floti'].peticiones[0].peticion[0]['datos-registrales'][0].seccion[0] = parseInt(seccion, 10);
+            parsedXml['corpme-floti'].peticiones[0].peticion[0]['datos-registrales'][0].finca[0] = parseInt(finca, 10);
         
 
             const newXml = builder.buildObject(parsedXml);
@@ -247,45 +246,53 @@ async function sendXMLxFinca(resultados) {
 
 async function handleReceipt(receipt, idPeticion) {
     // Suponemos que estamos tratando con un solo acuse
+    // Verificar si la respuesta general contiene un error
+    if (receipt && receipt['corpme-floti'] && receipt['corpme-floti'].error) {
+        // Extraer el código de error
+        const codigo = receipt['corpme-floti'].error[0]['$'].codigo;
+        console.error(`Error general en el XML recibido para ID ${idPeticion}: ${receipt['corpme-floti'].error[0]['_']} (Código ${codigo})`);
 
-   // Verificar si la respuesta contiene un error
-   if (receipt && receipt['corpme-floti'] && receipt['corpme-floti'].error) {
-    // Extraer el código de error
-    const codigo = receipt['corpme-floti'].error[0]['$'].codigo;
-    console.error(`Error en el XML recibido para ID ${idPeticion}: ${receipt['corpme-floti'].error[0]['_']} (Código ${codigo})`);
-
-    try {
         // Conectar a la base de datos y actualizar el estado y el código de error
         await sql.connect(config);
         await sql.query`UPDATE peticiones SET idEstado = 3, idError = ${codigo} WHERE idPeticion = ${idPeticion}`;
         console.log(`Estado actualizado a 3 y error registrado para idPeticion ${idPeticion}`);
-    } catch (dbError) {
-        console.error('Error al actualizar la base de datos:', dbError);
-    } finally {
-        // Asegurarse de cerrar la conexión a la base de datos
-        await sql.close();
-    }
-    } else {
-        const acuse = receipt['corpme-floti']['acuses'][0]['acuse'][0];
-        try {
-            await sql.connect(config);
-            await sql.query`UPDATE peticiones SET idEstado = 1, idError = NULL WHERE idPeticion = ${idPeticion}`;
-            console.log(`Estado actualizado a 1 para idPeticion ${idPeticion}`);
 
-            // Procesar cada identificador (si hay varios, sería acuse['identificador'].forEach(...))
-            if (acuse['identificador']) {
-                for (const identificador of acuse['identificador']) {
-                    await sql.query`UPDATE peticiones SET idCorpme = ${identificador} WHERE idPeticion = ${idPeticion}`;
-                    console.log(`Identificador actualizado a ${identificador} para idPeticion ${idPeticion}`); 
+    } else if (receipt && receipt['corpme-floti'] && receipt['corpme-floti']['acuses'] && receipt['corpme-floti']['acuses'][0]['acuse']) {
+        // Acceder al objeto 'acuse'
+        const acuse = receipt['corpme-floti']['acuses'][0]['acuse'][0];
+
+            // Verificar si el acuse contiene un error
+            if (acuse.error) {
+                const codigo = acuse.error[0]['$'].codigo;
+                const mensaje = acuse.error[0]['_'];
+                console.error(`Error específico en el acuse para ID ${idPeticion}: ${mensaje} (Código ${codigo})`);
+
+                // Conectar a la base de datos y actualizar el estado y el código de error
+                await sql.connect(config);
+                await sql.query`UPDATE peticiones SET idEstado = 3, idError = ${codigo} WHERE idPeticion = ${idPeticion}`;
+                console.log(`Estado actualizado a 3 y error registrado para idPeticion ${idPeticion}`);
+                
+            } else {
+            const acuse = receipt['corpme-floti']['acuses'][0]['acuse'][0];
+            try {
+                await sql.connect(config);
+                await sql.query`UPDATE peticiones SET idEstado = 1, idError = NULL WHERE idPeticion = ${idPeticion}`;
+                console.log(`Estado actualizado a 1 para idPeticion ${idPeticion}`);
+
+                // Procesar cada identificador (si hay varios, sería acuse['identificador'].forEach(...))
+                if (acuse['identificador']) {
+                    for (const identificador of acuse['identificador']) {
+                        await sql.query`UPDATE peticiones SET idCorpme = ${identificador} WHERE idPeticion = ${idPeticion}`;
+                        console.log(`Identificador actualizado a ${identificador} para idPeticion ${idPeticion}`); 
+                    }
                 }
+            } catch (err) {
+                console.error('Error al realizar operaciones en la base de datos:', err);
+            } finally {
+                await sql.close();
             }
-        } catch (err) {
-            console.error('Error al realizar operaciones en la base de datos:', err);
-        } finally {
-            await sql.close();
         }
     }
-
 }
 
  // Ruta principal para servir la página HTML
@@ -298,81 +305,144 @@ app.get('/ping', (req, res) => {
 });
 
 app.post('/spnts', async (req, res) => {
-    console.log('Tipo de Contenido:', req.headers['content-type']);
-    console.log('Cuerpo de la Solicitud:', req.body);
+    // console.log('Tipo de Contenido:', req.headers['content-type']);
+    // console.log('Cuerpo de la Solicitud:', req.body);
     try {
         const xmlData = req.body; // El cuerpo de la solicitud ya es un objeto JavaScript
+        // Verificar el tipo de XML recibido
+        if (xmlData['corpme-floti']) {
+            // Acceder a la estructura del objeto
+            const corpmeFloti = xmlData['corpme-floti'];
+            if (corpmeFloti && corpmeFloti.respuesta && corpmeFloti.respuesta.length > 0) {
+                const respuesta = corpmeFloti.respuesta[0];
 
-        // Acceder a la estructura del objeto
-        const corpmeFloti = xmlData['corpme-floti'];
-        if (corpmeFloti && corpmeFloti.respuesta && corpmeFloti.respuesta.length > 0) {
-            const respuesta = corpmeFloti.respuesta[0];
+                // Acceder a los elementos dentro de 'respuesta'
+                const identificador = respuesta.identificador ? respuesta.identificador[0] : null;
+                const referencia = respuesta.referencia ? respuesta.referencia[0] : null;
+                const tipoRespuesta = respuesta['tipo-respuesta'] ? respuesta['tipo-respuesta'][0] : null;
+                const fechaHora = respuesta['fecha-hora'] ? respuesta['fecha-hora'][0] : null;
+                const informacion = respuesta.informacion ? respuesta.informacion[0] : null;
 
-            // Acceder a los elementos dentro de 'respuesta'
-            const identificador = respuesta.identificador ? respuesta.identificador[0] : null;
-            const referencia = respuesta.referencia ? respuesta.referencia[0] : null;
-            const tipoRespuesta = respuesta['tipo-respuesta'] ? respuesta['tipo-respuesta'][0] : null;
-            const fechaHora = respuesta['fecha-hora'] ? respuesta['fecha-hora'][0] : null;
-            const informacion = respuesta.informacion ? respuesta.informacion[0] : null;
+                // Procesar la información, como extraer el fichero PDF si está presente
+                let ficheroPdfBase64;
+                if (informacion && informacion.fichero && informacion.fichero.length > 0) {
+                    ficheroPdfBase64 = informacion.fichero[0]['_']; // Suponiendo que es un elemento de texto
+                    // Aquí puedes decodificar el Base64 y guardar el PDF si es necesario
+                
+                    // Conectar a la base de datos y guardar el PDF
+                    try {
+                        await sql.connect(config);
+                        const query = `UPDATE peticiones SET pdf = @pdf, IdEstado = 4 WHERE idCorpme = @idCorpme`;
+                        const request = new sql.Request();
+                        
+                        // Convertir el base64 a un buffer binario
+                        const pdfBuffer = Buffer.from(ficheroPdfBase64, 'base64');
+                        
+                        // Añadir el PDF como un parámetro varbinary
+                        request.input('pdf', sql.VarBinary(sql.MAX), pdfBuffer);
+                        request.input('idCorpme', sql.VarChar(50), identificador);
+                        await request.query(query);
+                        
+                        console.log(identificador);
+                        console.log('PDF guardado en la base de datos exitosamente.');
 
-            // Procesar la información, como extraer el fichero PDF si está presente
-            let ficheroPdfBase64;
-            if (informacion && informacion.fichero && informacion.fichero.length > 0) {
-                ficheroPdfBase64 = informacion.fichero[0]['_']; // Suponiendo que es un elemento de texto
-                // Aquí puedes decodificar el Base64 y guardar el PDF si es necesario
-            
-                // Conectar a la base de datos y guardar el PDF
-                try {
-                    await sql.connect(config);
-                    const query = `UPDATE peticiones SET pdf = @pdf, IdEstado = 4 WHERE idCorpme = @idCorpme`;
-                    const request = new sql.Request();
-                    
-                    // Convertir el base64 a un buffer binario
-                    const pdfBuffer = Buffer.from(ficheroPdfBase64, 'base64');
-                    
-                    // Añadir el PDF como un parámetro varbinary
-                    request.input('pdf', sql.VarBinary(sql.MAX), pdfBuffer);
-                    request.input('idCorpme', sql.VarChar(50), identificador);
-                    await request.query(query);
-                    
-                    //PARA GUARDAR EL PDF EN UNA CARPETA Y EL PATH EN LA BBDD
+                        // Leer el XML de confirmación
+                        const confirmacionXml = fs.readFileSync(path.join(__dirname, 'xml/corpme_floti_ok.xml'), 'utf8');
 
-                    // Hay que cambiar el tipo de la celda pdf a varChar
+                        // Establecer el tipo de contenido y enviar el XML de confirmación
+                        res.set('Content-Type', 'text/xml');
+                        res.send(confirmacionXml);
 
-                    // Convertir el base64 a un buffer binario
-                    //const pdfBuffer = Buffer.from(ficheroPdfBase64, 'base64');
-                    //const pdfFilePath = path.join(__dirname, 'pdf', `${identificador}.pdf`);
-
-                    // Guardar el PDF en el sistema de archivos
-                    // await fs.writeFile(pdfFilePath, pdfBuffer);
-
-                    // Guardar la ruta del archivo en la base de datos
-                    //const query = `UPDATE peticiones SET pdf = @pdf WHERE idCorpme = @idCorpme`;
-                    //const request = new sql.Request();
-                    //.input('pdf', sql.NVarChar(255), pdfFilePath);
-                    //request.input('idCorpme', sql.VarChar(50), identificador);
-                    //await request.query(query);
-
-                    console.log('PDF guardado en la base de datos exitosamente.');
-
-                    // Leer el XML de confirmación
-                    const confirmacionXml = fs.readFileSync(path.join(__dirname, 'xml/corpme_floti_ok.xml'), 'utf8');
-
-                    // Establecer el tipo de contenido y enviar el XML de confirmación
-                    res.set('Content-Type', 'text/xml');
-                    res.send(confirmacionXml);
-
-                } catch (err) {
-                    console.error('Error al guardar en la base de datos:', err);
-                    res.status(500).send('Error al guardar el PDF en la base de datos');
-                    return;
+                    } catch (err) {
+                        console.error('Error al guardar en la base de datos:', err);
+                        res.status(500).send('Error al guardar el PDF en la base de datos');
+                        return;
+                    }
                 }
+
+            } else {
+                res.status(400).send('Formato de XML inválido o datos faltantes');
             }
 
-        } else {
-            res.status(400).send('Formato de XML inválido o datos faltantes');
-        }
+        } else if (xmlData['corpme-floti-facturacion']) {
+            // Procesar el segundo tipo de XML
+            const corpmeFlotiFacturacion = xmlData['corpme-floti-facturacion'];
+            const facturacion = corpmeFlotiFacturacion.facturacion;
 
+            // Iterar sobre las facturas
+            for (const factura of facturacion.factura) {
+                const ejercicio = factura.ejercicio;
+                const fecha = factura.fecha;
+                const numero = factura.numero;
+                const regimenCaja = factura['regimen-caja'];
+                const serie = factura.serie;
+
+                const emisor = factura.emisor;
+                const destinatario = factura.destinatario;
+                const importe = factura.importe;
+                const peticion = factura.peticion;
+
+                const emisorData = {
+                    cp: emisor.cp,
+                    domicilio: emisor.domicilio,
+                    municipio: emisor.municipio,
+                    nif: emisor.nif,
+                    nombre: emisor.nombre,
+                    provincia: emisor.provincia
+                };
+
+                const destinatarioData = {
+                    cp: destinatario.cp,
+                    domicilio: destinatario.domicilio,
+                    municipio: destinatario.municipio,
+                    nif: destinatario.nif,
+                    nombre: destinatario.nombre,
+                    provincia: destinatario.provincia
+                };
+
+                const importeData = {
+                    base: importe.base,
+                    impuesto: importe.impuesto,
+                    irpf: importe.irpf,
+                    total: importe.total
+                };
+
+                const peticionData = {
+                    destino: peticion.destino,
+                    fecha: peticion.fecha,
+                    fechaRespuesta: peticion['fecha-respuesta'],
+                    grupo: peticion.grupo,
+                    id: peticion.id,
+                    importeBase: peticion['importe-base'],
+                    porcentajeImpuesto: peticion['porcentaje-impuesto'],
+                    referencia: peticion.referencia,
+                    tipo: peticion.tipo,
+                    usuario: peticion.usuario
+                };
+
+                // Aquí podrías agregar el procesamiento necesario para la facturación
+                console.log('Factura procesada:', {
+                    ejercicio, fecha, numero, regimenCaja, serie, emisorData, destinatarioData, importeData, peticionData
+                });
+
+                // Por ejemplo, almacenar en la base de datos, etc.
+            }
+
+            // Construir el XML de confirmación para corpme-floti-facturacion
+            const builder = require('xmlbuilder');
+            const confirmacionFacturacionXml = builder.create('corpme-floti-facturacion', { encoding: 'UTF-8' })
+                .att('xmlns:xsi', 'http://www.w3.org/2001/XMLSchema-instance')
+                .att('id', corpmeFlotiFacturacion['@id'])  // Utilizar el mismo id del XML recibido
+                .att('xsi:noNamespaceSchemaLocation', 'https://www.test.registradores.org/schema/floti/facturacion.xsd')
+                .ele('ok')
+                .end({ pretty: true });
+            // Enviar la respuesta XML de confirmación
+            res.set('Content-Type', 'text/xml');
+            res.send(confirmacionFacturacionXml);
+
+        } else {
+            res.status(400).send('Formato de XML no soportado');
+        }
 
     } catch (error) {
         console.error(error);

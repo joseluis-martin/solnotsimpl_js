@@ -304,144 +304,18 @@ app.get('/ping', (req, res) => {
     res.send('Pong!');
 });
 
+// Ruta para manejar solicitudes POST en /spnts
 app.post('/spnts', async (req, res) => {
-    // console.log('Tipo de Contenido:', req.headers['content-type']);
-    // console.log('Cuerpo de la Solicitud:', req.body);
     try {
-        const xmlData = req.body; // El cuerpo de la solicitud ya es un objeto JavaScript
-        // Verificar el tipo de XML recibido
+        const xmlData = req.body;
+
+        // Verificar el tipo de XML y procesarlo en consecuencia
         if (xmlData['corpme-floti']) {
-            // Acceder a la estructura del objeto
-            const corpmeFloti = xmlData['corpme-floti'];
-            if (corpmeFloti && corpmeFloti.respuesta && corpmeFloti.respuesta.length > 0) {
-                const respuesta = corpmeFloti.respuesta[0];
-
-                // Acceder a los elementos dentro de 'respuesta'
-                const identificador = respuesta.identificador ? respuesta.identificador[0] : null;
-                const referencia = respuesta.referencia ? respuesta.referencia[0] : null;
-                const tipoRespuesta = respuesta['tipo-respuesta'] ? respuesta['tipo-respuesta'][0] : null;
-                const fechaHora = respuesta['fecha-hora'] ? respuesta['fecha-hora'][0] : null;
-                const informacion = respuesta.informacion ? respuesta.informacion[0] : null;
-
-                // Procesar la información, como extraer el fichero PDF si está presente
-                let ficheroPdfBase64;
-                if (informacion && informacion.fichero && informacion.fichero.length > 0) {
-                    ficheroPdfBase64 = informacion.fichero[0]['_']; // Suponiendo que es un elemento de texto
-                    // Aquí puedes decodificar el Base64 y guardar el PDF si es necesario
-                
-                    // Conectar a la base de datos y guardar el PDF
-                    try {
-                        await sql.connect(config);
-                        const query = `UPDATE peticiones SET pdf = @pdf, IdEstado = 4 WHERE idCorpme = @idCorpme`;
-                        const request = new sql.Request();
-                        
-                        // Convertir el base64 a un buffer binario
-                        const pdfBuffer = Buffer.from(ficheroPdfBase64, 'base64');
-                        
-                        // Añadir el PDF como un parámetro varbinary
-                        request.input('pdf', sql.VarBinary(sql.MAX), pdfBuffer);
-                        request.input('idCorpme', sql.VarChar(50), identificador);
-                        await request.query(query);
-                        
-                        console.log(identificador);
-                        console.log('PDF guardado en la base de datos exitosamente.');
-
-                        // Leer el XML de confirmación
-                        const confirmacionXml = fs.readFileSync(path.join(__dirname, 'xml/corpme_floti_ok.xml'), 'utf8');
-
-                        // Establecer el tipo de contenido y enviar el XML de confirmación
-                        res.set('Content-Type', 'text/xml');
-                        res.send(confirmacionXml);
-
-                    } catch (err) {
-                        console.error('Error al guardar en la base de datos:', err);
-                        res.status(500).send('Error al guardar el PDF en la base de datos');
-                        return;
-                    }
-                }
-
-            } else {
-                res.status(400).send('Formato de XML inválido o datos faltantes');
-            }
-
+            await processCorpmeFloti(xmlData, res);
         } else if (xmlData['corpme-floti-facturacion']) {
-            // Procesar el segundo tipo de XML
-            const corpmeFlotiFacturacion = xmlData['corpme-floti-facturacion'];
-            const facturacion = corpmeFlotiFacturacion.facturacion;
-
-            // Iterar sobre las facturas
-            for (const factura of facturacion.factura) {
-                const ejercicio = factura.ejercicio;
-                const fecha = factura.fecha;
-                const numero = factura.numero;
-                const regimenCaja = factura['regimen-caja'];
-                const serie = factura.serie;
-
-                const emisor = factura.emisor;
-                const destinatario = factura.destinatario;
-                const importe = factura.importe;
-                const peticion = factura.peticion;
-
-                const emisorData = {
-                    cp: emisor.cp,
-                    domicilio: emisor.domicilio,
-                    municipio: emisor.municipio,
-                    nif: emisor.nif,
-                    nombre: emisor.nombre,
-                    provincia: emisor.provincia
-                };
-
-                const destinatarioData = {
-                    cp: destinatario.cp,
-                    domicilio: destinatario.domicilio,
-                    municipio: destinatario.municipio,
-                    nif: destinatario.nif,
-                    nombre: destinatario.nombre,
-                    provincia: destinatario.provincia
-                };
-
-                const importeData = {
-                    base: importe.base,
-                    impuesto: importe.impuesto,
-                    irpf: importe.irpf,
-                    total: importe.total
-                };
-
-                const peticionData = {
-                    destino: peticion.destino,
-                    fecha: peticion.fecha,
-                    fechaRespuesta: peticion['fecha-respuesta'],
-                    grupo: peticion.grupo,
-                    id: peticion.id,
-                    importeBase: peticion['importe-base'],
-                    porcentajeImpuesto: peticion['porcentaje-impuesto'],
-                    referencia: peticion.referencia,
-                    tipo: peticion.tipo,
-                    usuario: peticion.usuario
-                };
-
-                // Aquí podrías agregar el procesamiento necesario para la facturación
-                console.log('Factura procesada:', {
-                    ejercicio, fecha, numero, regimenCaja, serie, emisorData, destinatarioData, importeData, peticionData
-                });
-
-                // Por ejemplo, almacenar en la base de datos, etc.
-            }
-
-            // Construir el XML de confirmación para corpme-floti-facturacion
-            const builder = require('xmlbuilder');
-            const confirmacionFacturacionXml = builder.create('corpme-floti-facturacion', { encoding: 'UTF-8' })
-                .att('xmlns:xsi', 'http://www.w3.org/2001/XMLSchema-instance')
-                .att('id', corpmeFlotiFacturacion['@id'])  // Utilizar el mismo id del XML recibido
-                .att('xsi:noNamespaceSchemaLocation', 'https://www.test.registradores.org/schema/floti/facturacion.xsd')
-                .ele('ok')
-                .end({ pretty: true });
-            // Enviar la respuesta XML de confirmación
-            res.set('Content-Type', 'text/xml');
-            res.send(confirmacionFacturacionXml);
-
+            await processCorpmeFlotiFacturacion(xmlData, res);
         } else {
-            res.status(400).send('Formato de XML no soportado');
+            res.status(400).send('Formato de XML inválido o datos faltantes');
         }
 
     } catch (error) {
@@ -449,6 +323,122 @@ app.post('/spnts', async (req, res) => {
         res.status(500).send('Error al procesar la respuesta');
     }
 });
+
+// Función para procesar el XML de tipo 'corpme-floti'
+async function processCorpmeFloti(xmlData, res) {
+    const corpmeFloti = xmlData['corpme-floti'];
+    if (corpmeFloti && corpmeFloti.respuesta && corpmeFloti.respuesta.length > 0) {
+        const respuesta = corpmeFloti.respuesta[0];
+        const identificador = respuesta.identificador ? respuesta.identificador[0] : null;
+        const informacion = respuesta.informacion ? respuesta.informacion[0] : null;
+
+        let ficheroPdfBase64;
+        if (informacion && informacion.fichero && informacion.fichero.length > 0) {
+            ficheroPdfBase64 = informacion.fichero[0]['_'];
+
+            try {
+                // Conexión a la base de datos
+                await sql.connect(config);
+                const query = `UPDATE peticiones SET pdf = @pdf, IdEstado = 4 WHERE idCorpme = @idCorpme`;
+                const request = new sql.Request();
+                const pdfBuffer = Buffer.from(ficheroPdfBase64, 'base64');
+                request.input('pdf', sql.VarBinary(sql.MAX), pdfBuffer);
+                request.input('idCorpme', sql.VarChar(50), identificador);
+                await request.query(query);
+
+                console.log(identificador);
+                console.log('PDF guardado en la base de datos exitosamente.');
+
+                // Leer y enviar XML de confirmación
+                const confirmacionXml = fs.readFileSync(path.join(__dirname, 'xml/corpme_floti_ok.xml'), 'utf8');
+                res.set('Content-Type', 'text/xml');
+                res.send(confirmacionXml);
+
+            } catch (err) {
+                console.error('Error al guardar en la base de datos:', err);
+                res.status(500).send('Error al guardar el PDF en la base de datos');
+                return;
+            }
+        }
+    } else {
+        res.status(400).send('Formato de XML inválido o datos faltantes');
+    }
+}
+
+ // Función para procesar el XML de tipo 'corpme-floti-facturacion'
+async function processCorpmeFlotiFacturacion(xmlData, res) {
+    const facturacion = xmlData['corpme-floti-facturacion'];
+    const facturacionData = facturacion.facturacion ? facturacion.facturacion[0] : null;
+    if (facturacionData) {
+        // Extraer datos principales de facturación
+        const facturacionId = facturacionData.$.id;
+        const importeBase = facturacionData.$['importe-base'];
+        const importeImpuesto = facturacionData.$['importe-impuesto'];
+        const periodoInicio = facturacionData.$['periodo-inicio'];
+        const periodoFin = facturacionData.$['periodo-fin'];
+
+        try {
+            // Conexión a la base de datos
+            await sql.connect(config);
+
+            // Insertar datos en la tabla facturación_factura
+            const facturaQuery = `INSERT INTO facturacion_factura (factura_id, "factura_importe-base", "factura_importe-impuesto", "factura_periodo-inicio", "factura_periodo-fin") 
+                                  VALUES (@facturacion_id, @importe_base, @importe_impuesto, @periodo_inicio, @periodo_fin);
+                                  SELECT SCOPE_IDENTITY() AS id;`;
+            const requestFactura = new sql.Request();
+            requestFactura.input('facturacion_id', sql.VarChar(50), facturacionId);
+            requestFactura.input('importe_base', sql.Money, parseFloat(importeBase));
+            requestFactura.input('importe_impuesto', sql.Money, parseFloat(importeImpuesto));
+            requestFactura.input('periodo_inicio', sql.SmallDateTime, new Date(periodoInicio));
+            requestFactura.input('periodo_fin', sql.SmallDateTime, new Date(periodoFin));
+
+            const result = await requestFactura.query(facturaQuery);
+            const facturaId = result.recordset[0].id;
+
+            // Insertar datos de cada factura en la tabla facturación_peticion
+            for (let factura of facturacionData.factura) {
+                const peticion = factura.peticion ? factura.peticion[0] : null;
+                if (peticion) {
+                    // Extraer datos de la petición
+                    const facturaId = facturacionId;
+                    const grupo = peticion.$['grupo'];
+                    const id = peticion.$['id'];
+                    const usuario = peticion.$['usuario'];
+                    const fecha = peticion.$['fecha'];
+                    const fechaRespuesta = peticion.$['fecha-respuesta'];
+                    const tipo = peticion.$['tipo'];
+                    const importeBasePeticion = peticion.$['importe-base'];
+                    const porcentajeImpuesto = peticion.$['porcentaje-impuesto'];
+
+                    // Insertar datos en la tabla facturación_peticion
+                    const peticionQuery = `INSERT INTO facturacion_peticion (factura_id, peticion_grupo, peticion_id, peticion_usuario, peticion_fecha, "peticion_fecha-respuesta", peticion_tipo, "peticion_importe-base", "peticion_porcentaje-impuesto") 
+                                           VALUES (@factura_id, @grupo, @id, @usuario, @fecha, @fecha_respuesta, @tipo, @importe_base, @porcentaje_impuesto);`;
+                    const requestPeticion = new sql.Request();
+                    requestPeticion.input('factura_id', sql.Int, facturaId);
+                    requestPeticion.input('grupo', sql.VarChar(50), grupo);
+                    requestPeticion.input('id', sql.VarChar(50), id);
+                    requestPeticion.input('usuario', sql.VarChar(50), usuario);
+                    requestPeticion.input('fecha', sql.SmallDateTime, new Date(fecha));
+                    requestPeticion.input('fecha_respuesta', sql.SmallDateTime, new Date(fechaRespuesta));
+                    requestPeticion.input('tipo', sql.Int(4), tipo);
+                    requestPeticion.input('importe_base', sql.Money, parseFloat(importeBasePeticion));
+                    requestPeticion.input('porcentaje_impuesto', sql.Decimal(5, 2), parseFloat(porcentajeImpuesto));
+
+                    await requestPeticion.query(peticionQuery);
+                }
+            }
+
+            res.send('Datos de facturación guardados exitosamente.');
+
+        } catch (err) {
+            console.error('Error al guardar en la base de datos:', err);
+            res.status(500).send('Error al guardar los datos de facturación en la base de datos');
+            return;
+        }
+    } else {
+        res.status(400).send('Formato de XML inválido o datos faltantes');
+    }
+}
 
 
 // Ruta de tu archivo .pfx y su contraseña

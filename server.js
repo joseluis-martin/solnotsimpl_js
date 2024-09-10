@@ -12,6 +12,9 @@ const app = express();
 const upload = multer({ dest: 'uploads/' });
 const port = 5999;
 const sql = require('mssql');
+const logFilePath = './logs/actions.log';  // Ruta del archivo de log
+const url = 'https://test.registradores.org/xmlpeticion';
+//const url = 'http://localhost:3000/xmlpeticion'
 
 const instance = axios.create({
     httpsAgent: new https.Agent({  
@@ -32,7 +35,7 @@ app.use(express.static('public'));
 const config = {
     user: 'notassimples',  // Usuario de la base de datos
     password: 'akdsuTR54%',  // Contraseña del usuario
-    server: '192.168.100.8',  // Dirección IP y puerto del servidor SQL Server
+    server: 'gt_sqlserver.gtasvalor.tasvalor.com',  // Dirección IP y puerto del servidor SQL Server
     port: 1433,
     database: 'tasadores',  // Nombre de la base de datos
     options: {
@@ -41,11 +44,32 @@ const config = {
     }
 };
 
+function logAction(action) {
+    const timestamp = new Date().toISOString();
+    const logMessage = `[${timestamp}] ${action}\n`;
+    fs.appendFileSync(logFilePath, logMessage);
+}
+
+async function getIdPeticionByIdCorpme(idCorpme) {
+    const result = await sql.query`SELECT idPeticion FROM peticiones WHERE idCorpme = ${idCorpme}`;
+    return result.recordset.length > 0 ? result.recordset[0].idPeticion : null;
+}
+
+async function getIdVersionByIdCorpme(idCorpme) {
+    const result = await sql.query`SELECT idVersion FROM peticiones WHERE idCorpme = ${idCorpme}`;
+    return result.recordset.length > 0 ? result.recordset[0].idVersion : null;
+}
+
+async function getIdUsuarioByIdPeticionAndIdVersion(idPeticion, idVersion) {
+    const result = await sql.query`SELECT idUsuario FROM peticiones WHERE idPeticion = ${idPeticion} AND idVersion = ${idVersion}`;
+    return result.recordset.length > 0 ? result.recordset[0].idUsuario : null;
+}
+
 async function fetchPendingRequests() {
-    let resultadosTitular = [];  // Crear un array para almacenar las solicitudes por titular
-    let resultadosIDUFIR = [];  // Crear un array para almacenar las solicitudes por IDUFIR
-    let resultadosFinca = [];  // Crear un array para almacenar los resultados de finca
-    let resultadosReenvio = [];  // Array para almacenar las solicitudes de reenvío
+    let resultadosTitular = [];  // Crea un array para almacenar las solicitudes por titular
+    let resultadosIDUFIR = [];  // Crea un array para almacenar las solicitudes por IDUFIR
+    let resultadosFinca = [];  // Crea un array para almacenar los resultados de finca
+    let resultadosReenvio = [];  // Crea un array para almacenar las solicitudes de reenvío
 
     try {
         await sql.connect(config);
@@ -59,35 +83,38 @@ async function fetchPendingRequests() {
 
             const datosSolicitud = await sql.query`SELECT * FROM datosSolicitud WHERE idPeticion = ${idPeticion} AND idVersion = ${idVersion}`;
 
-            // Si idTipoSolicitud es 0, almacenamos los datos de finca en el array
-            if (datosSolicitud.recordset.length > 0 && datosSolicitud.recordset[0].idTipoSolicitud === 0) {
+            // Si idTipoSolicitud es 1, almacenamos los datos de finca en el array
+            if (datosSolicitud.recordset.length > 0 && datosSolicitud.recordset[0].idTipoSolicitud === 1) {
                 resultadosFinca.push({
                     codigoRegistro: datosSolicitud.recordset[0].codigoRegistro,
                     municipio: datosSolicitud.recordset[0].municipio,
                     provincia: datosSolicitud.recordset[0].provincia,
                     seccion: datosSolicitud.recordset[0].seccion,
                     finca: datosSolicitud.recordset[0].finca,
+                    observaciones: datosSolicitud.recordset[0].observaciones,
                     idPeticion: idPeticion,
                     idVersion: idVersion
                 });
             }
-            // Si idTipoSolicitud es 1, almacenamos el nifTitular y el idPeticion en el array
-            else if (datosSolicitud.recordset.length > 0 && datosSolicitud.recordset[0].idTipoSolicitud === 1) {
+            // Si idTipoSolicitud es 2, almacenamos el nifTitular y el idPeticion en el array
+            else if (datosSolicitud.recordset.length > 0 && datosSolicitud.recordset[0].idTipoSolicitud === 2) {
                 resultadosTitular.push({
                     nifTitular: datosSolicitud.recordset[0].nifTitular,
+                    observaciones: datosSolicitud.recordset[0].observaciones,
                     idPeticion: idPeticion,
                     idVersion: idVersion
                 });
             }
-            // Si idTipoSolicitud es 2, almacenamos el IDUFIR y el idPeticion en el array
-            else if (datosSolicitud.recordset.length > 0 && datosSolicitud.recordset[0].idTipoSolicitud === 2) {
+            // Si idTipoSolicitud es 3, almacenamos el IDUFIR y el idPeticion en el array
+            else if (datosSolicitud.recordset.length > 0 && datosSolicitud.recordset[0].idTipoSolicitud === 3) {
                 resultadosIDUFIR.push({
                     IDUFIR: datosSolicitud.recordset[0].IDUFIR,
+                    observaciones: datosSolicitud.recordset[0].observaciones,
                     idPeticion: idPeticion,
                     idVersion: idVersion
                 });
             }
-            // Si idTipoSolicitud es 3, almacenamos iidCorpme y el idPeticion en el array para reenvío
+            // Si idTipoSolicitud es 3, almacenamos idCorpme y el idPeticion en el array para reenvío
             else if (datosSolicitud.recordset.length > 0 && datosSolicitud.recordset[0].idTipoSolicitud === 3) {
                 resultadosReenvio.push({
                     idCorpme: idCorpme,  // Asumiendo que idCorpme está en la tabla peticiones
@@ -102,30 +129,35 @@ async function fetchPendingRequests() {
 
         if (resultadosFinca.length > 0) {
             console.log("Resultados de finca encontrados:", resultadosFinca);
+            logAction(`Error en la base de datos: ${resultadosFinca}`);
         } else {
             //console.log("No se encontraron registros válidos para finca o el idTipoSolicitud no es 0.");
         }
 
         if (resultadosTitular.length > 0) {
             console.log("Resultados de titulares encontrados:", resultadosTitular);
+            logAction(`Error en la base de datos: ${resultadosTitular}`);
         } else {
            // console.log("No se encontraron registros válidos para titulares o el idTipoSolicitud no es 1.");
         }
 
         if (resultadosIDUFIR.length > 0) {
             console.log("Resultados de IDUFIR encontrados:", resultadosIDUFIR);
+            logAction(`Error en la base de datos: ${resultadosIDUFIR}`);
         } else {
             //console.log("No se encontraron registros válidos para IDUFIR o el idTipoSolicitud no es 2.");
         }
 
         if (resultadosReenvio.length > 0) {
             console.log("Resultados de Reenvío encontrados:", resultadosReenvio);
+            logAction(`Error en la base de datos: ${resultadosReenvio}`);
         } else {
             //console.log("No se encontraron registros válidos para IDUFIR o el idTipoSolicitud no es 3.");
         }
             return { resultadosTitular, resultadosIDUFIR, resultadosFinca, resultadosReenvio };  // Devolver todos los arrays de resultados
     } catch (err) {
-        console.error('Error en la base de datos:', err);
+        console.error('Error en la base de datos en fetchPendingRequests:', err);
+        logAction(`Error en la base de datos en fetchPendingRequests : ${err.message}`);
         throw err;  // Lanzar el error
     } finally {
         await sql.close();  // Asegurar que la conexión se cierre
@@ -134,14 +166,15 @@ async function fetchPendingRequests() {
 
 async function sendXMLxTitular(resultados) {
     for (let data of resultados) {
-        // console.log(data);
-        const { nifTitular, idPeticion, idVersion } = data;
+
+        const { nifTitular, observaciones, idPeticion, idVersion } = data;
         const xml = fs.readFileSync('./xml/peticion_x_titular.xml', 'utf-8');
 
         try {
             const parsedXml = await xml2js.parseStringPromise(xml);
             parsedXml['corpme-floti'].peticiones[0].peticion[0].titular[0].nif[0] = nifTitular;
-            parsedXml['corpme-floti'].peticiones[0].peticion[0].referencia = `RT${idPeticion}${idVersion}`;
+            parsedXml['corpme-floti'].peticiones[0].peticion[0].referencia = `RT${idPeticion}_${idVersion}`;
+            parsedXml['corpme-floti'].peticiones[0].peticion[0].observaciones[0] = observaciones;
 
             // (Opcional) Guardar el XML en un archivo
             const newXml = builder.buildObject(parsedXml);
@@ -156,12 +189,12 @@ async function sendXMLxTitular(resultados) {
                 method: 'POST',
                 headers: { 'Content-Type': 'text/xml' },
                 data: newXml,
-                //url: 'http://localhost:3000/xmlpeticion',
-                url: 'https://test.registradores.org/xmlpeticion',
+                url: url,
             };
 
             const response = await instance(options);
             if (response.data) {
+                logAction(`Solicitud lanzada a ${url} x Titular y acuse recibido ok para idPeticion ${idPeticion} y version ${idVersion}`);
                 fs.writeFileSync(`./xml/acuseRecibido_${idPeticion}_${idVersion}.xml`, response.data);
                 const receiptXml = await xml2js.parseStringPromise(response.data);
                 handleReceipt(receiptXml, idPeticion, idVersion);
@@ -180,20 +213,22 @@ async function sendXMLxTitular(resultados) {
                 console.error('Error configurando la solicitud para ID:', idPeticion, 'version:', idVersion);
             }
             console.error('Información del error:', error.message);  // Mensaje general del error
+            logAction(`Error al lanzar petición x Titular : ${err.message}`);
         }
     }
 }
 
 async function sendXMLxIDUFIR(resultados) {
     for (let data of resultados) {
-        // console.log(data);
+
         const { IDUFIR, idPeticion, idVersion } = data;
         const xml = fs.readFileSync('./xml/peticion_x_idufir.xml', 'utf-8');
 
         try {
             const parsedXml = await xml2js.parseStringPromise(xml);
             parsedXml['corpme-floti'].peticiones[0].peticion[0].idufir[0] = IDUFIR;
-            parsedXml['corpme-floti'].peticiones[0].peticion[0].referencia = `RI${idPeticion}${idVersion}`;
+            parsedXml['corpme-floti'].peticiones[0].peticion[0].observaciones[0] = observaciones;
+            parsedXml['corpme-floti'].peticiones[0].peticion[0].referencia = `RI${idPeticion}_${idVersion}`;
    
             const newXml = builder.buildObject(parsedXml);
 
@@ -209,12 +244,12 @@ async function sendXMLxIDUFIR(resultados) {
                 method: 'POST',
                 headers: { 'Content-Type': 'text/xml' },
                 data: newXml,
-                //url: 'http://localhost:3000/xmlpeticion',
-                url: 'https://test.registradores.org/xmlpeticion',
+                url: url,
             };
 
             const response = await instance(options);
             if (response.data) {
+                logAction(`Solicitud lanzada a ${url} x IDUFIR y acuse recibido ok para idPeticion ${idPeticion} y version ${idVersion}`);
                 fs.writeFileSync(`./xml/acuseRecibido_${idPeticion}_${idVersion}.xml`, response.data);
                 const receiptXml = await xml2js.parseStringPromise(response.data);
                 handleReceipt(receiptXml, idPeticion, idVersion);
@@ -230,6 +265,7 @@ async function sendXMLxIDUFIR(resultados) {
                 console.error('Error configurando la solicitud para ID:', idPeticion, 'version:', idVersion);
             }
             console.error('Información del error:', error.message);  // Mensaje general del error
+            logAction(`Error al lanzar petición x IDUFIR : ${err.message}`);
         }
     }
 }
@@ -248,6 +284,7 @@ async function sendXMLxFinca(resultados) {
             parsedXml['corpme-floti'].peticiones[0].peticion[0]['datos-registrales'][0].provincia[0] = parseInt(provincia, 10);
             parsedXml['corpme-floti'].peticiones[0].peticion[0]['datos-registrales'][0].seccion[0] = parseInt(seccion, 10);
             parsedXml['corpme-floti'].peticiones[0].peticion[0]['datos-registrales'][0].finca[0] = parseInt(finca, 10);
+            parsedXml['corpme-floti'].peticiones[0].peticion[0].observaciones[0] = observaciones;
             parsedXml['corpme-floti'].peticiones[0].peticion[0].referencia = `RF${idPeticion}_${idVersion}`;
 
             const newXml = builder.buildObject(parsedXml);
@@ -264,12 +301,12 @@ async function sendXMLxFinca(resultados) {
                 method: 'POST',
                 headers: { 'Content-Type': 'text/xml' },
                 data: newXml,
-                //url: 'http://localhost:3000/xmlpeticion',
-                url: 'https://test.registradores.org/xmlpeticion',
+                url: url,
             };
 
             const response = await instance(options);
             if (response.data) {
+                logAction(`Solicitud lanzada a ${url} x Finca y acuse recibido ok para idPeticion ${idPeticion} y version ${idVersion}`);
                 fs.writeFileSync(`./xml/acuseRecibido_${idPeticion}_${idVersion}.xml`, response.data);
                 const receiptXml = await xml2js.parseStringPromise(response.data);
                 handleReceipt(receiptXml, idPeticion, idVersion);
@@ -285,6 +322,7 @@ async function sendXMLxFinca(resultados) {
                 console.error('Error configurando la solicitud para ID:', idPeticion, 'version:', idVersion);
             }
             console.error('Información del error:', error.message);  // Mensaje general del error
+            logAction(`Error al lanzar petición x Finca : ${err.message}`);
         }
     }
 }
@@ -312,7 +350,7 @@ async function sendXMLReenvio(resultados) {
                 method: 'POST',
                 headers: { 'Content-Type': 'text/xml' },
                 data: newXml,
-                url: 'https://test.registradores.org/xmlpeticion',
+                url: url,
             };
 
             const response = await instance(options);
@@ -340,52 +378,91 @@ async function sendXMLReenvio(resultados) {
 
 async function handleReceipt(receipt, idPeticion, idVersion) {
     // Suponemos que estamos tratando con un solo acuse
-    // Verificar si la respuesta general contiene un error
-    if (receipt && receipt['corpme-floti'] && receipt['corpme-floti'].error) {
-        // Extraer el código de error
-        const codigo = receipt['corpme-floti'].error[0]['$'].codigo;
-        console.error(`Error general en el XML recibido para ID ${idPeticion} ${idVersion}: ${receipt['corpme-floti'].error[0]['_']} (Código ${codigo})`);
+    let comentario = ''; // Se inicializa el comentario con una cadena vacia
+    let idUsuario = ''; // Se inicializa el idUsuario como una cadena vacía
+    let idEstado = 2; // Por defecto 2, que indica éxito
 
-        // Conectar a la base de datos y actualizar el estado y el código de error
+    try {
+        // Se conecta a la base de datos para obtener el idUsuario de la tabla 'peticiones'
         await sql.connect(config);
-        await sql.query`UPDATE peticiones SET idEstado = 3, idError = ${codigo} WHERE idPeticion = ${idPeticion} AND idVersion = ${idVersion}`;
-        console.log(`Estado actualizado a 3 y error registrado para idPeticion ${idPeticion} y version ${idVersion}`);
+        const result = await sql.query`SELECT idUsuario FROM peticiones WHERE idPeticion = ${idPeticion} AND idVersion = ${idVersion}`;
+        
+        if (result.recordset.length > 0) {
+            idUsuario = result.recordset[0].idUsuario;
+        } else {
+            throw new Error(`No se encontró un registro para idPeticion ${idPeticion} y idVersion ${idVersion}`);
+        }
 
-    } else if (receipt && receipt['corpme-floti'] && receipt['corpme-floti']['acuses'] && receipt['corpme-floti']['acuses'][0]['acuse']) {
-        // Acceder al objeto 'acuse'
-        const acuse = receipt['corpme-floti']['acuses'][0]['acuse'][0];
+        // Se verifica si la respuesta general contiene un error
+        if (receipt && receipt['corpme-floti'] && receipt['corpme-floti'].error) {
+            // Se extrae el código de error
+            const codigo = receipt['corpme-floti'].error[0]['$'].codigo;
+            const mensaje = receipt['corpme-floti'].error[0]['_'];
+            console.error(`Error general en el XML recibido para ID ${idPeticion} ${idVersion}: ${mensaje} (Código ${codigo})`);
 
-            // Verificar si el acuse contiene un error
-            if (acuse.error) {
-                const codigo = acuse.error[0]['$'].codigo;
-                const mensaje = acuse.error[0]['_'];
-                console.error(`Error específico en el acuse para ID ${idPeticion} ${idVersion}: ${mensaje} (Código ${codigo})`);
+            idEstado = 3; // Se cambia el estado a 3 (indica error)
+            comentario = `Petición recibida por Registradores KO: idError: ${codigo} | ${mensaje}`;
 
-                // Conectar a la base de datos y actualizar el estado y el código de error
-                await sql.connect(config);
-                await sql.query`UPDATE peticiones SET idEstado = 3, idError = ${codigo} WHERE idPeticion = ${idPeticion} AND idVersion = ${idVersion}`;
-                console.log(`Estado actualizado a 3 y error registrado para idPeticion ${idPeticion} y version ${idVersion}`);
-                
-            } else {
+            // Se Conecta a la base de datos y se actualiza el estado y el código de error
+            await sql.connect(config);
+            await sql.query`UPDATE peticiones SET idEstado = 3, idError = ${codigo} WHERE idPeticion = ${idPeticion} AND idVersion = ${idVersion}`;
+            console.log(`Estado actualizado a 3 y error registrado para idPeticion ${idPeticion} y version ${idVersion}`);
+
+        } else if (receipt && receipt['corpme-floti'] && receipt['corpme-floti']['acuses'] && receipt['corpme-floti']['acuses'][0]['acuse']) {
+            // Se accede al objeto 'acuse'
             const acuse = receipt['corpme-floti']['acuses'][0]['acuse'][0];
-            try {
-                await sql.connect(config);
-                await sql.query`UPDATE peticiones SET idEstado = 2, idError = NULL WHERE idPeticion = ${idPeticion} AND idVersion = ${idVersion}`;
-                console.log(`Estado actualizado a 2 para idPeticion ${idPeticion} y version ${idVersion}`);
 
-                // Procesar cada identificador (si hay varios, sería acuse['identificador'].forEach(...))
-                if (acuse['identificador']) {
-                    for (const identificador of acuse['identificador']) {
-                        await sql.query`UPDATE peticiones SET idCorpme = ${identificador} WHERE idPeticion = ${idPeticion} AND idVersion = ${idVersion}`;
-                        console.log(`Identificador actualizado a ${identificador} para idPeticion ${idPeticion} y version ${idVersion}`); 
+                // Se verifica si el acuse contiene un error
+                if (acuse.error) {
+                    const codigo = acuse.error[0]['$'].codigo;
+                    const mensaje = acuse.error[0]['_'];
+                    console.error(`Error específico en el acuse para ID ${idPeticion} ${idVersion}: ${mensaje} (Código ${codigo})`);
+
+                    idEstado = 3; // Se cambia el estado a 3 por error específico
+                    comentario = `Petición recibida por Registradores KO: idError: ${codigo} | ${mensaje}`;
+
+                    // Se conecta a la base de datos y se actualiza el estado y el código de error
+                    await sql.connect(config);
+                    await sql.query`UPDATE peticiones SET idEstado = 3, idError = ${codigo} WHERE idPeticion = ${idPeticion} AND idVersion = ${idVersion}`;
+                    console.log(`Estado actualizado a 3 y error registrado para idPeticion ${idPeticion} y version ${idVersion}`);
+                    
+                } else {
+                const acuse = receipt['corpme-floti']['acuses'][0]['acuse'][0];
+                try {
+                    await sql.connect(config);
+                    await sql.query`UPDATE peticiones SET idEstado = 2, idError = NULL WHERE idPeticion = ${idPeticion} AND idVersion = ${idVersion}`;
+                    console.log(`Estado actualizado a 2 para idPeticion ${idPeticion} y version ${idVersion}`);
+
+                    // Se procesa cada identificador (si hay varios, sería acuse['identificador'].forEach(...))
+                    if (acuse['identificador']) {
+                        for (const identificador of acuse['identificador']) {
+                            await sql.query`UPDATE peticiones SET idCorpme = ${identificador} WHERE idPeticion = ${idPeticion} AND idVersion = ${idVersion}`;
+                            console.log(`Identificador actualizado a ${identificador} para idPeticion ${idPeticion} y version ${idVersion}`); 
+                        }
                     }
+                    comentario = `Petición recibida por Registradores OK: idCorpme = ${identificador}`;
+                } catch (err) {
+                    console.error('Error al realizar operaciones en la base de datos:', err);
+                } finally {
+                    await sql.close();
                 }
-            } catch (err) {
-                console.error('Error al realizar operaciones en la base de datos:', err);
-            } finally {
-                await sql.close();
             }
         }
+        // Se llama al procedure después de manejar el receipt
+        await sql.query`
+            EXEC notassimples.peticiones_historia_new
+                @idPeticion = ${idPeticion},
+                @idVersion = ${idVersion},
+                @idUsuario = ${idUsuario},
+                @idEstado = ${idEstado},
+                @comentario = ${comentario}
+        `;
+        console.log(`Procedure notassimples.peticiones_historia_new ejecutado para idPeticion ${idPeticion} y version ${idVersion}`);
+
+    } catch (err) {
+        console.error('Error al realizar operaciones en la base de datos:', err);
+    } finally {
+        await sql.close();
     }
 }
 
@@ -425,33 +502,110 @@ async function processCorpmeFloti(xmlData, res) {
         const respuesta = corpmeFloti.respuesta[0];
         const identificador = respuesta.identificador ? respuesta.identificador[0] : null;
         const informacion = respuesta.informacion ? respuesta.informacion[0] : null;
+        const tipoRespuesta = respuesta['tipo-respuesta'] ? respuesta['tipo-respuesta'][0] : null;
 
-        let ficheroPdfBase64;
-        if (informacion && informacion.fichero && informacion.fichero.length > 0) {
-            ficheroPdfBase64 = informacion.fichero[0]['_'];
+        if (!tipoRespuesta) {
+            res.status(400).send('Tipo de respuesta no encontrado');
+            return;
+        }
 
+        // Si tipo-respuesta es 1, es la nota simple solicitada
+
+        if (tipoRespuesta === '1') {
+            let ficheroPdfBase64;
+            if (informacion && informacion.fichero && informacion.fichero.length > 0) {
+                ficheroPdfBase64 = informacion.fichero[0]['_'];
+
+                try {
+                    // Conexión a la base de datos
+                    await sql.connect(config);
+                    const query = `UPDATE peticiones SET pdf = @pdf, IdEstado = 5, idRespuesta = @tipoRespuesta WHERE idCorpme = @idCorpme`;
+                    const request = new sql.Request();
+                    const pdfBuffer = Buffer.from(ficheroPdfBase64, 'base64');
+                    request.input('pdf', sql.VarBinary(sql.MAX), pdfBuffer);
+                    request.input('idCorpme', sql.VarChar(50), identificador);
+                    request.input('tipoRespuesta', sql.Int, tipoRespuesta);
+                    await request.query(query);
+
+                    console.log(identificador);
+                    console.log('PDF guardado en la base de datos exitosamente.');
+
+                    // Se llamar al procedure notassimples.peticiones_historia_new
+                    const idPeticion = await getIdPeticionByIdCorpme(identificador);  // Función para obtener idPeticion
+                    const idVersion = await getIdVersionByIdCorpme(identificador);    // Función para obtener idVersion
+
+
+                    if (idPeticion && idVersion) {
+                        const comentario = 'Recepción de NS por GT';
+                        const idUsuario = await getIdUsuarioByIdPeticionAndIdVersion(idPeticion, idVersion); // Obtén el idUsuario de la tabla
+
+                        await sql.query`
+                            EXEC notassimples.peticiones_historia_new
+                            @idPeticion = ${idPeticion},
+                            @idVersion = ${idVersion},
+                            @idUsuario = ${idUsuario},
+                            @idEstado = 5,
+                            @comentario = ${comentario}
+                        `;
+                        console.log(`Procedure notassimples.peticiones_historia_new ejecutado para idPeticion ${idPeticion} y version ${idVersion}`);
+                    } else {
+                        console.error('No se encontraron idPeticion o idVersion asociados con el identificador corpme');
+                    }
+
+                    // Leer y enviar XML de confirmación
+                    const confirmacionXml = fs.readFileSync(path.join(__dirname, 'xml/corpme_floti_ok.xml'), 'utf8');
+                    res.set('Content-Type', 'text/xml');
+                    res.send(confirmacionXml);
+
+                } catch (err) {
+                    console.error('Error al guardar en la base de datos:', err);
+                    res.status(500).send('Error al guardar el PDF en la base de datos');
+                    return;
+                }
+            }
+
+} else {
+            // Si tipo-respuesta NO es 1, procesar el nuevo flujo
             try {
-                // Conexión a la base de datos
                 await sql.connect(config);
-                const query = `UPDATE peticiones SET pdf = @pdf, IdEstado = 5 WHERE idCorpme = @idCorpme`;
+
+                // Guardar tipo-respuesta en la tabla peticiones
+                const query = `UPDATE peticiones SET IdEstado = 5, tipoRespuesta = @tipoRespuesta WHERE idCorpme = @idCorpme`;
                 const request = new sql.Request();
-                const pdfBuffer = Buffer.from(ficheroPdfBase64, 'base64');
-                request.input('pdf', sql.VarBinary(sql.MAX), pdfBuffer);
+                request.input('tipoRespuesta', sql.Int, tipoRespuesta); 
                 request.input('idCorpme', sql.VarChar(50), identificador);
                 await request.query(query);
 
-                console.log(identificador);
-                console.log('PDF guardado en la base de datos exitosamente.');
+                // Obtener idPeticion y idVersion
+                const idPeticion = await getIdPeticionByIdCorpme(identificador);
+                const idVersion = await getIdVersionByIdCorpme(identificador);
 
-                // Leer y enviar XML de confirmación
+                if (idPeticion && idVersion) {
+                    // Llamar al procedimiento con el comentario basado en informacion.texto
+                    const comentario = informacion && informacion.texto ? informacion.texto[0] : 'Sin información adicional';
+                    const idUsuario = await getIdUsuarioByIdPeticionAndIdVersion(idPeticion, idVersion);
+
+                    await sql.query`
+                        EXEC notassimples.peticiones_historia_new
+                        @idPeticion = ${idPeticion},
+                        @idVersion = ${idVersion},
+                        @idUsuario = ${idUsuario},
+                        @idEstado = 5,  -- Asumimos que el estado sigue siendo 5 para este flujo
+                        @comentario = ${comentario}
+                    `;
+                    console.log(`Procedure notassimples.peticiones_historia_new ejecutado para idPeticion ${idPeticion} y version ${idVersion}`);
+                } else {
+                    console.error('No se encontraron idPeticion o idVersion asociados con el identificador corpme');
+                }
+
+                // Enviar confirmación sin el procesamiento del PDF
                 const confirmacionXml = fs.readFileSync(path.join(__dirname, 'xml/corpme_floti_ok.xml'), 'utf8');
                 res.set('Content-Type', 'text/xml');
                 res.send(confirmacionXml);
 
             } catch (err) {
-                console.error('Error al guardar en la base de datos:', err);
-                res.status(500).send('Error al guardar el PDF en la base de datos');
-                return;
+                console.error('Error al guardar el tipo-respuesta en la base de datos:', err);
+                res.status(500).send('Error al procesar la respuesta');
             }
         }
     } else {
@@ -556,16 +710,16 @@ function runFetchPendingRequests() {
         .then(data => {
             if (data) {
                 if (data.resultadosTitular.length > 0) {
-                    sendXMLxTitular(data.resultadosTitular);
+                   // sendXMLxTitular(data.resultadosTitular);
                 }
                 if (data.resultadosIDUFIR.length > 0) {
-                    sendXMLxIDUFIR(data.resultadosIDUFIR);
+                  //  sendXMLxIDUFIR(data.resultadosIDUFIR);
                 }
                 if (data.resultadosFinca.length > 0) {
-                    sendXMLxFinca(data.resultadosFinca);
+                  //  sendXMLxFinca(data.resultadosFinca);
                 }
                 if (data.resultadosReenvio.length > 0) {
-                    sendXMLReenvio(data.resultadosReenvio);
+                  //  sendXMLReenvio(data.resultadosReenvio);
                 }
             } else {
                 console.log("No hay solicitudes sin tramitar.");

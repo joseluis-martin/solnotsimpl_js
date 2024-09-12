@@ -10,12 +10,14 @@ const axios = require('axios');
 const xmlparser = require('express-xml-bodyparser');
 const app = express();
 const upload = multer({ dest: 'uploads/' });
-const port = 5999;
 const sql = require('mssql');
 const logFilePath = './logs/actions.log';  // Ruta del archivo de log
+require('dotenv').config();
 //const url = 'https://test.registradores.org/xmlpeticion';
-const url = 'http://localhost:3000/xmlpeticion'
+//const url = 'http://localhost:3000/xmlpeticion'
 
+const url = process.env.XML_URL;
+const port = process.env.PORT;
 const instance = axios.create({
     httpsAgent: new https.Agent({  
         rejectUnauthorized: false // Desactiva la validación de certificados
@@ -33,16 +35,17 @@ app.use(express.static('public'));
 
 // Configuración para acceder a la BBDD de tasadores
 const config = {
-    user: 'notassimples',  // Usuario de la base de datos
-    password: 'akdsuTR54%',  // Contraseña del usuario
-    server: 'gt_sqlserver.gtasvalor.tasvalor.com',  // Dirección IP y puerto del servidor SQL Server
-    port: 1433,
-    database: 'tasadores',  // Nombre de la base de datos
+    user: process.env.DB_USER,  // Usuario de la base de datos
+    password: process.env.DB_PASSWORD,  // Contraseña del usuario
+    server: process.env.DB_SERVER,  // Dirección IP y puerto del servidor SQL Server
+    port: parseInt(process.env.DB_PORT),  // Puerto de la base de datos
+    database: process.env.DB_DATABASE,  // Nombre de la base de datos
     options: {
-        encrypt: false,  // Generalmente, para conexiones locales no es necesario cifrar
+        encrypt: false,  // Cambiar a true si se usa en producción y requiere cifrado
         enableArithAbort: true
     }
 };
+
 
 function logAction(action) {
     const timestamp = new Date().toISOString();
@@ -605,7 +608,7 @@ async function processCorpmeFloti(xmlData, res) {
                 }
             }
 
-} else {
+        } else {
             // Si tipo-respuesta NO es 1, procesar el nuevo flujo
             try {
                 await sql.connect(config);
@@ -747,16 +750,18 @@ async function processCorpmeFlotiFacturacion(xmlData, res) {
 }
 
 
-// Ruta de tu archivo .pfx y su contraseña
-const pfxPath = './Certificado_SSL/2024/certificate.pfx';
-const pfxPassword = 'M4s72aKalo';
+// Ruta de tu archivo .pfx y su contraseña QUITAR
+//const pfxPath = './Certificado_SSL/2024/certificate.pfx';
+//const pfxPassword = 'M4s72aKalo';
 
 // Opciones de HTTPS incluyendo el archivo .pfx y la contraseña
 const credentials = {
-    pfx: fs.readFileSync(pfxPath),
-    passphrase: pfxPassword
+    pfx: fs.readFileSync(process.env.SSL_PFX_PATH),
+    passphrase: process.env.SSL_PFX_PASSWORD
 };
+
 const httpsServer = https.createServer(credentials, app);
+httpsServer.setTimeout(0);
 
 httpsServer.listen(port, () => {
     console.log(`Servidor escuchando en https://localhost:${port}`);

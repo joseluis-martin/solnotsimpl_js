@@ -117,8 +117,18 @@ async function fetchPendingRequests() {
                     idVersion: idVersion
                 });
             }
-            // Si idTipoSolicitud es 3, almacenamos idCorpme y el idPeticion en el array para reenvío
-            else if (datosSolicitud.recordset.length > 0 && datosSolicitud.recordset[0].idTipoSolicitud === 3) {
+        }
+        // idEstado = 6 Pendiente de petición de reenvío
+        const peticionesReenvio = await sql.query`SELECT idPeticion, idVersion, idCorpme FROM peticiones WHERE idEstado = 16`;
+
+        // Recorrer cada petición encontrada
+        for (let i = 0; i < peticionesReenvio.recordset.length; i++) {
+            const idPeticion = peticionesReenvio.recordset[i].idPeticion;
+            const idVersion =  peticionesReenvio.recordset[i].idVersion;
+            const idCorpme =  peticionesReenvio.recordset[i].idCorpme;
+
+            const datosSolicitud = await sql.query`SELECT * FROM datosSolicitud WHERE idPeticion = ${idPeticion} AND idVersion = ${idVersion}`;
+            if (datosSolicitud.recordset.length > 0) {
                 resultadosReenvio.push({
                     idCorpme: idCorpme,  // Asumiendo que idCorpme está en la tabla peticiones
                     idPeticion: idPeticion,
@@ -527,19 +537,44 @@ async function processCorpmeFloti(xmlData, res) {
         const respuesta = corpmeFloti.respuesta[0];
         const identificador = respuesta.identificador ? respuesta.identificador[0] : null;
         const informacion = respuesta.informacion ? respuesta.informacion[0] : null;
-        const tipoRespuesta = respuesta['tipo-respuesta'] ? respuesta['tipo-respuesta'][0]._ : null;
+        
+        // Accedemos al tipo-respuesta y su código
+        const tipoRespuesta = respuesta['tipo-respuesta'] ? respuesta['tipo-respuesta'][0] : null;
+        const codigoTipoRespuesta = tipoRespuesta ? tipoRespuesta['$'].codigo : null;
+        const textoTipoRespuesta = tipoRespuesta ? tipoRespuesta['_'] : null;
+    
+        // Se graba el xml recibido
 
+        // Obtener idPeticion y idVersion
+        await sql.connect(config);
+        const idPeticion = await getIdPeticionByIdCorpme(identificador);
+        const idVersion = await getIdVersionByIdCorpme(identificador);
+
+
+        // Se convierte el objeto JavaScript de vuelta a formato XML
+        const xmlString = builder.buildObject(xmlData);
+
+        fs.writeFile(`./xml/respuestaRecibida_${idPeticion}_${idVersion}_${identificador}.xml`, xmlString, (err) => {
+            if (err) {
+                console.error('Error al guardar el archivo XML:', err);
+                res.status(500).send('Error al guardar el archivo XML');
+                return;
+            }
+            console.log(`Archivo XML de respuesta guardado idPeticion: ${idPeticion} | idVersion: ${idVersion} | idCorpme ${identificador}`);
+            logAction(`Archivo XML de respuesta guardado idPeticion: ${idPeticion} | idVersion: ${idVersion} | idCorpme ${identificador}`);
+        });
+        
         if (!tipoRespuesta) {
             res.status(400).send('Tipo de respuesta no encontrado');
             logAction(`Tipo de respuesta no encontrado al tramitar una respuesta Floti`);
             return;
         }
 
-        console.log(tipoRespuesta);
+        console.log(codigoTipoRespuesta, textoTipoRespuesta);
 
         // Si tipo-respuesta es 1, es la nota simple solicitada
 
-        if (tipoRespuesta === '1') {
+        if (codigoTipoRespuesta === '1') {
             let ficheroPdfBase64;
             if (informacion && informacion.fichero && informacion.fichero.length > 0) {
                 ficheroPdfBase64 = informacion.fichero[0]['_'];
@@ -547,12 +582,12 @@ async function processCorpmeFloti(xmlData, res) {
                 try {
                     // Conexión a la base de datos
                     await sql.connect(config);
-                    const query = `UPDATE peticiones SET pdf = @pdf, IdEstado = 5, idRespuesta = @tipoRespuesta WHERE idCorpme = @idCorpme`;
+                    const query = `UPDATE peticiones SET pdf = @pdf, IdEstado = 5, idRespuesta = @codigoTipoRespuesta WHERE idCorpme = @idCorpme`;
                     const request = new sql.Request();
                     const pdfBuffer = Buffer.from(ficheroPdfBase64, 'base64');
                     request.input('pdf', sql.VarBinary(sql.MAX), pdfBuffer);
                     request.input('idCorpme', sql.VarChar(50), identificador);
-                    request.input('tipoRespuesta', sql.Int, tipoRespuesta);
+                    request.input('codigoTipoRespuesta', sql.Int, codigoTipoRespuesta);
                     await request.query(query);
 
                     console.log(identificador);
@@ -607,29 +642,36 @@ async function processCorpmeFloti(xmlData, res) {
                     return;
                 }
             }
+        } else if (codigoTipoRespuesta === '10') {
+        // Si tipo-respuesta es 10, es la nota simple reenviada
+            let ficheroPdfBase64;
+            if (informacion && informacion.fichero && informacion.fichero.length > 0) {
+                ficheroPdfBase64 = informacion.fichero[0]['_'];
 
-        } else {
-            // Si tipo-respuesta NO es 1, procesar el nuevo flujo
-            try {
-                await sql.connect(config);
+                try {
+                    // Conexión a la base de datos
+                    await sql.connect(config);
+                    const query = `UPDATE peticiones SET pdf = @pdf, IdEstado = 5, idRespuesta = @codigoTipoRespuesta WHERE idCorpme = @idCorpme`;
+                    const request = new sql.Request();
+                    const pdfBuffer = Buffer.from(ficheroPdfBase64, 'base64');
+                    request.input('pdf', sql.VarBinary(sql.MAX), pdfBuffer);
+                    request.input('idCorpme', sql.VarChar(50), identificador);
+                    request.input('codigoTipoRespuesta', sql.Int, codigoTipoRespuesta);
+                    await request.query(query);
 
-                // Guardar tipo-respuesta en la tabla peticiones
-                const query = `UPDATE peticiones SET IdEstado = 5, idRespuesta = @tipoRespuesta WHERE idCorpme = @idCorpme`;
-                const request = new sql.Request();
-                request.input('tipoRespuesta', sql.Int, tipoRespuesta); 
-                request.input('idCorpme', sql.VarChar(50), identificador);
-                await request.query(query);
+                    console.log(identificador);
+                    console.log('PDF guardado en la base de datos exitosamente.');
 
-                // Obtener idPeticion y idVersion
-                const idPeticion = await getIdPeticionByIdCorpme(identificador);
-                const idVersion = await getIdVersionByIdCorpme(identificador);
+                    // Se llama al procedure notassimples.peticiones_historia_new
+                    const idPeticion = await getIdPeticionByIdCorpme(identificador);  // Función para obtener idPeticion
+                    const idVersion = await getIdVersionByIdCorpme(identificador);    // Función para obtener idVersion
 
-                if (idPeticion && idVersion) {
-                    // Llamar al procedimiento con el comentario basado en informacion.texto
-                    const comentario = informacion && informacion.texto ? informacion.texto[0] : 'Sin información adicional';
-                    const idUsuario = await getIdUsuarioByIdPeticionAndIdVersion(idPeticion, idVersion);
 
-                    const idEstado = 5;
+                    if (idPeticion && idVersion) {
+                        const comentario = 'Recepción de NS por GT';
+                        const idUsuario = await getIdUsuarioByIdPeticionAndIdVersion(idPeticion, idVersion); // Obtén el idUsuario de la tabla
+
+                        const idEstado = 5;
 
                         const query = `
                         EXEC notassimples.peticiones_historia_new
@@ -649,21 +691,161 @@ async function processCorpmeFloti(xmlData, res) {
                         request.input('comentario', sql.VarChar(200), comentario);
             
                         await request.query(query);
-                        logAction(`Recibida respuesta negativa para solicitud: ${identificador}, idPeticion: ${idPeticion} e idVersion: ${idVersion}. ${comentario}`);
-                } else {
-                    console.error('No se encontraron idPeticion o idVersion asociados con el identificador corpme');
-                    logAction(`No se encontraron idPeticion o idVersion asociados con el identificador corpme`);
+
+                        logAction(`PDF de nota simple reenviada guardado en la base de datos exitosamente para idCorpme: ${identificador}, idPeticion: ${idPeticion} e idVersion: ${idVersion}`);
+
+                    } else {
+                        console.error('No se encontraron idPeticion o idVersion asociados con el identificador corpme');
+                        logAction(`No se encontraron idPeticion o idVersion asociados con el identificador corpme`);
+                    }
+
+                    // Leer y enviar XML de confirmación
+                    const confirmacionXml = fs.readFileSync(path.join(__dirname, 'xml/corpme_floti_ok.xml'), 'utf8');
+                    res.set('Content-Type', 'text/xml');
+                    res.send(confirmacionXml);
+
+                } catch (err) {
+                    console.error('Error al guardar el PDF en la base de datos:', err);
+                    logAction(`Error al guardar el PDF en la base de datos: ${err}`);
+                    res.status(500).send('Error al guardar el PDF en la base de datos');
+                    return;
                 }
+            }
+        } else {
+           // Notas denegadas 
+            if (codigoTipoRespuesta === '11') {
+            // Nota simple reenviada negativa
+                try {
+                    await sql.connect(config);
+                    // Guardar tipo-respuesta en la tabla peticiones
+                    const query = `UPDATE peticiones SET IdEstado = 7, idRespuesta = @codigoTipoRespuesta WHERE idCorpme = @idCorpme`;
+                    const request = new sql.Request();
+                    request.input('codigoTipoRespuesta', sql.Int, codigoTipoRespuesta); 
+                    request.input('idCorpme', sql.VarChar(50), identificador);
+                    await request.query(query);
 
-                // Enviar confirmación sin el procesamiento del PDF
-                const confirmacionXml = fs.readFileSync(path.join(__dirname, 'xml/corpme_floti_ok.xml'), 'utf8');
-                res.set('Content-Type', 'text/xml');
-                res.send(confirmacionXml);
+                    // Obtener idPeticion y idVersion
+                    const idPeticion = await getIdPeticionByIdCorpme(identificador);
+                    const idVersion = await getIdVersionByIdCorpme(identificador);
 
-            } catch (err) {
-                console.error('Error al guardar el tipo-respuesta en la base de datos:', err);
-                logAction(`Error al guardar el tipo-respuesta en la base de datos: ${err}`);
-                res.status(500).send('Error al procesar la respuesta');
+                    if (idPeticion && idVersion) {
+                        // Llamar al procedimiento con el comentario basado en informacion.texto
+                        const comentario = informacion && informacion.texto ? informacion.texto[0] : 'Sin información adicional';
+                        const idUsuario = await getIdUsuarioByIdPeticionAndIdVersion(idPeticion, idVersion);
+
+                        const idEstado = 7;
+
+                            const query = `
+                            EXEC notassimples.peticiones_historia_new
+                                @idPeticion,
+                                @idVersion,
+                                @idUsuario,
+                                @idEstado,
+                                @comentario
+                            `;
+                        
+                            const request = new sql.Request();
+                
+                            request.input('idPeticion',sql.Int, idPeticion);
+                            request.input('idVersion', sql.SmallInt, idVersion);
+                            request.input('idUsuario', sql.VarChar(20), idUsuario);
+                            request.input('idEstado', sql.TinyInt, idEstado);
+                            request.input('comentario', sql.VarChar(200), comentario);
+                
+                            await request.query(query);
+                            logAction(`Recibida respuesta negativa para solicitud de reenvío: ${identificador}, idPeticion: ${idPeticion} e idVersion: ${idVersion}. ${comentario}`);
+                    } else {
+                        console.error('No se encontraron idPeticion o idVersion asociados con el identificador corpme');
+                        logAction(`No se encontraron idPeticion o idVersion asociados con el identificador corpme`);
+                    }
+
+                    // Enviar confirmación sin el procesamiento del PDF
+                    const confirmacionXml = fs.readFileSync(path.join(__dirname, 'xml/corpme_floti_ok.xml'), 'utf8');
+                    res.set('Content-Type', 'text/xml');
+                    res.send(confirmacionXml);
+
+                } catch (err) {
+                    console.error('Error al guardar el tipo-respuesta en la base de datos:', err);
+                    logAction(`Error al guardar el tipo-respuesta en la base de datos: ${err}`);
+                    res.status(500).send('Error al procesar la respuesta');
+                }
+            } else {
+                try {
+                    await sql.connect(config);
+                    // Guardar tipo-respuesta en la tabla peticiones
+                    const query = `UPDATE peticiones SET IdEstado = 4, idRespuesta = @codigoTipoRespuesta WHERE idCorpme = @idCorpme`;
+                    const request = new sql.Request();
+                    request.input('codigoTipoRespuesta', sql.Int, codigoTipoRespuesta); 
+                    request.input('idCorpme', sql.VarChar(50), identificador);
+                    await request.query(query);
+
+                    // Obtener idPeticion y idVersion
+                    const idPeticion = await getIdPeticionByIdCorpme(identificador);
+                    const idVersion = await getIdVersionByIdCorpme(identificador);
+
+                    if (idPeticion && idVersion) {
+                        // Llamar al procedimiento con el comentario basado en informacion.texto
+                        let textoIntermedio;
+                        switch (codigoTipoRespuesta) {
+                            case '20':
+                                textoIntermedio = 'Denegación';
+                                break;
+                            case '21':
+                                textoIntermedio = 'Denegación por inconsistencia de datos';
+                                break;
+                            case '22':
+                                textoIntermedio = 'Denegación por falta de datos';
+                                break;
+                            case '23':
+                                textoIntermedio = 'Denegación por demasiados titulares coincidentes';
+                                break;
+                            case '24':
+                                textoIntermedio = 'Denegación por finca inexistente';
+                                break;
+                            default:
+                                textoIntermedio = 'Denegación';
+                                break;
+                        }
+                        const textoTipoRespuesta = informacion && informacion.texto ? informacion.texto[0] : 'Sin información adicional';
+                        const comentario = `Petición denegada por Registradores: idRespuesta: ${codigoTipoRespuesta} | ${textoIntermedio} | ${textoTipoRespuesta}`;
+                        const idUsuario = await getIdUsuarioByIdPeticionAndIdVersion(idPeticion, idVersion);
+
+                        const idEstado = 4;
+
+                            const query = `
+                            EXEC notassimples.peticiones_historia_new
+                                @idPeticion,
+                                @idVersion,
+                                @idUsuario,
+                                @idEstado,
+                                @comentario
+                            `;
+                        
+                            const request = new sql.Request();
+                
+                            request.input('idPeticion',sql.Int, idPeticion);
+                            request.input('idVersion', sql.SmallInt, idVersion);
+                            request.input('idUsuario', sql.VarChar(20), idUsuario);
+                            request.input('idEstado', sql.TinyInt, idEstado);
+                            request.input('comentario', sql.VarChar(200), comentario);
+                
+                            await request.query(query);
+                            logAction(`Petición denegada por Registradores: idRespuesta: ${codigoTipoRespuesta} | ${textoIntermedio} | ${textoTipoRespuesta} | idCorpme: ${identificador} | idPeticion: ${idPeticion} | idVersion:${idPeticion}.`);
+                    } else {
+                        console.error(`No se encontraron idPeticion ${idPeticion} o idVersion ${idPeticion} asociados con el identificador corpme: ${identificador}`);
+                        logAction(`No se encontraron idPeticion ${idPeticion} o idVersion ${idPeticion} asociados con el identificador corpme: ${identificador}`);
+                    }
+
+                    // Enviar confirmación sin el procesamiento del PDF
+                    const confirmacionXml = fs.readFileSync(path.join(__dirname, 'xml/corpme_floti_ok.xml'), 'utf8');
+                    res.set('Content-Type', 'text/xml');
+                    res.send(confirmacionXml);
+
+                } catch (err) {
+                    console.error('Error al guardar el tipo-respuesta en la base de datos:', err);
+                    logAction(`Error al guardar el tipo-respuesta en la base de datos: ${err}`);
+                    res.status(500).send('Error al procesar la respuesta');
+                }
             }
         }
     } else {
@@ -676,6 +858,20 @@ async function processCorpmeFloti(xmlData, res) {
 async function processCorpmeFlotiFacturacion(xmlData, res) {
     const facturacion = xmlData['corpme-floti-facturacion'];
     const facturacionData = facturacion.facturacion ? facturacion.facturacion[0] : null;
+
+    // Se convierte el objeto JavaScript de vuelta a formato XML
+    const xmlString = builder.buildObject(xmlData);
+
+    fs.writeFile(`./xml/respuestaFacturacion${Date.now()}.xml`, xmlString, (err) => {
+        if (err) {
+            console.error('Error al guardar el archivo XML:', err);
+            res.status(500).send('Error al guardar el archivo XML');
+            return;
+        }
+        console.log(`Archivo XML de facturación guardado`);
+        logAction(`Archivo XML de facturación guardado`);
+    });
+
     if (facturacionData) {
         // Extraer datos principales de facturación
         const importeBase = facturacionData.$['importe-base'];

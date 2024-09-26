@@ -502,14 +502,6 @@ async function handleReceipt(receipt, idPeticion, idVersion) {
 // Función para procesar el XML de respuesta a una solicitud de reenvío
 async function processReenvíoCorpmeFloti(xmlData) {
     const corpmeFloti = xmlData['corpme-floti'];
-    const xmlString = builder.buildObject(xmlData);
-    fs.writeFile(`./xml/respuestaNegativaReenvio.xml`, xmlString, (err) => {
-        if (err) {
-            console.error('(Reenvio) Error al guardar el archivo XML:', err);
-            res.status(500).send('(Reenvio) Error al guardar el archivo XML');
-            return;
-        }
-    });
     if (corpmeFloti && corpmeFloti.respuesta && corpmeFloti.respuesta.length > 0) {
         const respuesta = corpmeFloti.respuesta[0];
         const identificador = respuesta.identificador ? respuesta.identificador[0] : null;
@@ -520,7 +512,41 @@ async function processReenvíoCorpmeFloti(xmlData) {
         const codigoTipoRespuesta = tipoRespuesta ? tipoRespuesta['$'].codigo : null;
         const textoTipoRespuesta = tipoRespuesta ? tipoRespuesta['_'] : null;
     
-        // Se graba el xml recibido
+        // Hacemos una copia del XML para modificarla antes de guardarla en la base de datos
+        let xmlDataSinPdfNiFirma = JSON.parse(JSON.stringify(xmlData)); // Copia profunda del objeto original
+
+
+        // Eliminar el campo <ds:signature> dentro de corpme-floti si existe en la copia del XML
+        if (xmlDataSinPdfNiFirma['corpme-floti'] && xmlDataSinPdfNiFirma['corpme-floti']['ds:signature']) {
+            delete xmlDataSinPdfNiFirma['corpme-floti']['ds:signature'];
+        }
+
+        // Eliminar el fichero PDF incrustado en la copia del XML
+        if (xmlDataSinPdfNiFirma['corpme-floti'].respuesta[0].informacion && 
+            xmlDataSinPdfNiFirma['corpme-floti'].respuesta[0].informacion[0].fichero) {
+            delete xmlDataSinPdfNiFirma['corpme-floti'].respuesta[0].informacion[0].fichero;
+        }
+
+        // Guardar el XML sin el PDF incrustado y sin el campo ds:signature en la tabla peticiones
+        try {
+            await sql.connect(config);
+            
+            // Se convierte el objeto modificado de vuelta a formato XML
+            const xmlStringSinPdfNiFirma = builder.buildObject(xmlDataSinPdfNiFirma);
+
+            const queryGuardarXml = `UPDATE peticiones SET xml_respuesta = @xmlRespuesta WHERE idCorpme = @idCorpme`;
+            const requestGuardarXml = new sql.Request();
+            requestGuardarXml.input('xmlRespuesta', sql.NVarChar(sql.MAX), xmlStringSinPdfNiFirma);
+            requestGuardarXml.input('idCorpme', sql.VarChar(50), identificador);
+            await requestGuardarXml.query(queryGuardarXml);
+
+            console.log(`XML sin PDF y sin firma guardado en la base de datos para idCorpme: ${identificador}`);
+
+        } catch (err) {
+            console.error('Error al guardar el XML en la base de datos:', err);
+            res.status(500).send('Error al guardar el XML en la base de datos');
+            return;
+        }
 
         // Obtener idPeticion y idVersion
         await sql.connect(config);
@@ -787,26 +813,46 @@ async function processCorpmeFloti(xmlData, res) {
         const codigoTipoRespuesta = tipoRespuesta ? tipoRespuesta['$'].codigo : null;
         const textoTipoRespuesta = tipoRespuesta ? tipoRespuesta['_'] : null;
     
-        // Se graba el xml recibido
+        // Hacemos una copia del XML para modificarla antes de guardarla en la base de datos
+        let xmlDataSinPdfNiFirma = JSON.parse(JSON.stringify(xmlData)); // Copia profunda del objeto original
+
+
+        // Eliminar el campo <ds:signature> dentro de corpme-floti si existe en la copia del XML
+        if (xmlDataSinPdfNiFirma['corpme-floti'] && xmlDataSinPdfNiFirma['corpme-floti']['ds:signature']) {
+            delete xmlDataSinPdfNiFirma['corpme-floti']['ds:signature'];
+        }
+
+        // Eliminar el fichero PDF incrustado en la copia del XML
+        if (xmlDataSinPdfNiFirma['corpme-floti'].respuesta[0].informacion && 
+            xmlDataSinPdfNiFirma['corpme-floti'].respuesta[0].informacion[0].fichero) {
+            delete xmlDataSinPdfNiFirma['corpme-floti'].respuesta[0].informacion[0].fichero;
+        }
+
+        // Guardar el XML sin el PDF incrustado y sin el campo ds:signature en la tabla peticiones
+        try {
+            await sql.connect(config);
+            
+            // Se convierte el objeto modificado de vuelta a formato XML
+            const xmlStringSinPdfNiFirma = builder.buildObject(xmlDataSinPdfNiFirma);
+
+            const queryGuardarXml = `UPDATE peticiones SET xml_respuesta = @xmlRespuesta WHERE idCorpme = @idCorpme`;
+            const requestGuardarXml = new sql.Request();
+            requestGuardarXml.input('xmlRespuesta', sql.NVarChar(sql.MAX), xmlStringSinPdfNiFirma);
+            requestGuardarXml.input('idCorpme', sql.VarChar(50), identificador);
+            await requestGuardarXml.query(queryGuardarXml);
+
+            console.log(`XML sin PDF y sin firma guardado en la base de datos para idCorpme: ${identificador}`);
+
+        } catch (err) {
+            console.error('Error al guardar el XML en la base de datos:', err);
+            res.status(500).send('Error al guardar el XML en la base de datos');
+            return;
+        }
 
         // Obtener idPeticion y idVersion
         await sql.connect(config);
         const idPeticion = await getIdPeticionByIdCorpme(identificador);
         const idVersion = await getIdVersionByIdCorpme(identificador);
-
-
-        // Se convierte el objeto JavaScript de vuelta a formato XML
-        const xmlString = builder.buildObject(xmlData);
-
-        fs.writeFile(`./xml/respuestaRecibida_${idPeticion}_${idVersion}_${identificador}.xml`, xmlString, (err) => {
-            if (err) {
-                console.error('Error al guardar el archivo XML:', err);
-                res.status(500).send('Error al guardar el archivo XML');
-                return;
-            }
-            console.log(`Archivo XML de respuesta guardado idPeticion: ${idPeticion} | idVersion: ${idVersion} | idCorpme ${identificador}`);
-            logAction(`Archivo XML de respuesta guardado idPeticion: ${idPeticion} | idVersion: ${idVersion} | idCorpme ${identificador}`);
-        });
         
         if (!tipoRespuesta) {
             res.status(400).send('Tipo de respuesta no encontrado');
@@ -836,23 +882,6 @@ async function processCorpmeFloti(xmlData, res) {
 
                     console.log(identificador);
                     console.log('PDF guardado en la base de datos exitosamente.');
-
-                    //Se limina la parte del PDFy del certificado del objeto xmlData antes de convertirlo
-                    delete informacion.fichero;
-                    delete xmlData['corpme-floti']['ds:signature'];
-
-                    // Se oniverte el objeto XML modificado a una cadena XML
-                    const xmlSinPdfString = builder.buildObject(xmlData);
-
-                    // Se guarda el XML sin el PDF en el campo `xml_peticion`
-                    const queryXml = `UPDATE peticiones SET xml_respuesta = @xmlRespuesta WHERE idCorpme = @idCorpme`;
-                    const requestXml = new sql.Request();
-                    requestXml.input('xmlRespuesta', sql.NVarChar(sql.MAX), xmlSinPdfString);
-                    requestXml.input('idCorpme', sql.VarChar(50), identificador);
-                    await requestXml.query(queryXml);
-
-                    console.log('XML sin PDF guardado en la base de datos exitosamente.');
-
 
                     // Se llama al procedure notassimples.peticiones_historia_new
                     const idPeticion = await getIdPeticionByIdCorpme(identificador);  // Función para obtener idPeticion
@@ -922,22 +951,6 @@ async function processCorpmeFloti(xmlData, res) {
 
                     console.log(identificador);
                     console.log('PDF guardado en la base de datos exitosamente.');
-
-                    //Se limina la parte del PDF y del certificado del objeto xmlData antes de convertirlo
-                    delete informacion.fichero;
-                    delete xmlData['corpme-floti']['ds:signature'];
-
-                    // Se oniverte el objeto XML modificado a una cadena XML
-                    const xmlSinPdfString = builder.buildObject(xmlData);
-
-                    // Se guarda el XML sin el PDF en el campo `xml_peticion`
-                    const queryXml = `UPDATE peticiones SET xml_respuesta = @xmlRespuesta WHERE idCorpme = @idCorpme`;
-                    const requestXml = new sql.Request();
-                    requestXml.input('xmlRespuesta', sql.NVarChar(sql.MAX), xmlSinPdfString);
-                    requestXml.input('idCorpme', sql.VarChar(50), identificador);
-                    await requestXml.query(queryXml);
-
-                    console.log('XML sin PDF guardado en la base de datos exitosamente.');
 
                     // Se llama al procedure notassimples.peticiones_historia_new
                     const idPeticion = await getIdPeticionByIdCorpme(identificador);  // Función para obtener idPeticion

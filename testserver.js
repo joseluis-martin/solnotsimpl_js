@@ -20,7 +20,7 @@ app.post('/xmlpeticion', (req, res) => {
             </credenciales>
             <acuse>
                 <referencia>RF_X</referencia>
-                <identificador>Z16TT14Q</identificador>
+                <identificador>Z16TT16Q</identificador>
             </acuse>
         </acuses>
     </corpme-floti>
@@ -28,17 +28,10 @@ app.post('/xmlpeticion', (req, res) => {
 
         // Simula un acuse de recibo XML con error
         const acuseXMLconError = `
-        <corpme-floti xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://www.test.registradores.org/schema/floti/envio.xsd">
-            <acuses id="acuses">
-                <acuse>
-                    <identificador>Z16TF84T</identificador>
-                    <!-- Descomentar la siguiente línea para simular un error -->
-                    <error>
-                        <codigo>6</codigo>
-                    </error>
-                </acuse>
-            </acuses>
-        </corpme-floti>
+            <?xml version="1.0" encoding="utf-8"?>
+            <corpme-floti xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://www.test.registradores.org/schema/floti/envio.xsd">
+                <error codigo="4">No se ha recibido el XML de la respuesta, la respuesta no tiene el nodo del fichero ni del texto o el PDF no es válido.</error>    
+            </corpme-floti>
         `;
     
          // Simula el reenvío de una nota simple
@@ -47,8 +40,8 @@ app.post('/xmlpeticion', (req, res) => {
          `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <corpme-floti xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://www.test.registradores.org/schema/floti/envio.xsd">
   <respuesta id="respuesta">
-    <identificador>Z16TT77N</identificador>
-    <referencia>RF91</referencia>
+    <identificador>Z16TT14Q</identificador>
+    <referencia>RF_20_1</referencia>
     <tipo-respuesta codigo="11">Re-envio nota</tipo-respuesta>
     <fecha-hora>2024-09-06T10:07:00.000Z</fecha-hora>
     <informacion registro="35021">
@@ -496,80 +489,7 @@ PDJmZDdlNWU0ZjYyYTAzOTJlZDU5N2Y0ZGZmODM0ZmUxPl0vRW5jcnlwdCAxNCAw
 IFIvSW5mbyAxNSAwIFIvU2l6ZSAxNj4+CnN0YXJ0eHJlZgoyMDczMAolJUVPRgo=</fichero>
     </informacion>
   </respuesta>
-  <ds:Signature xmlns:ds="http://www.w3.org/2000/09/xmldsig#">
-    <ds:SignedInfo>
-      <ds:CanonicalizationMethod Algorithm="http://www.w3.org/TR/2001/REC-xml-c14n-20010315"/>
-      <ds:SignatureMethod Algorithm="http://www.w3.org/2000/09/xmldsig#rsa-sha1"/>
-      <ds:Reference URI="#respuesta">
-        <ds:Transforms>
-          <ds:Transform Algorithm="http://www.w3.org/2000/09/xmldsig#enveloped-signature"/>
-          <ds:Transform Algorithm="http://www.w3.org/TR/2001/REC-xml-c14n-20010315#WithComments"/>
-          <ds:Transform Algorithm="http://www.w3.org/2002/06/xmldsig-filter2">
-            <dsig-xpath:XPath xmlns:dsig-xpath="http://www.w3.org/2002/06/xmldsig-filter2" Filter="subtract">//informacion</dsig-xpath:XPath>
-          </ds:Transform>
-        </ds:Transforms>
-        <ds:DigestMethod Algorithm="http://www.w3.org/2000/09/xmldsig#sha1"/>
-        <ds:DigestValue>1Mj40MQxs3BlyTmtxUoh60dvG+U=</ds:DigestValue>
-      </ds:Reference>
-    </ds:SignedInfo>
-    <ds:SignatureValue>
-sQNjWW2clwM5OiJJcbDvd2rwRiOBk/VVQh73b9kK1LXUTgHc6YJ7uwclt/zoUIXu3XcOhGu7aaAK
-0pZII+x3Lt9cCY2WnAGfsPYKApDGqeRTDK1F9COrJ+MK3RngCvHmeF041YX+jrKAhuV6p2cMQQi0
-Dw6dcjJLgZMhCFzpfXu9/e9uM8F1bGWLNrPGTdit6oA1JYCaocPwPN7wYWfaYaM6TfqI3+sDB66H
-veurYaqPd3/GKhTC8Q++4p+ORt5QgFQlQ5VHSD5EEDfd1v4ik/8PdyNlKMBvLyT+QOlDJ/mRc0Mj
-onuAxvzgE59OJgRqsQbJ3kUdNKrLh/+Qy/fBiQ==
-</ds:SignatureValue>
-    <ds:KeyInfo>
-      <ds:X509Data>
-        <ds:X509Certificate>
-MIIJpTCCB42gAwIBAgIQAQtkYQYaizBmVYhR2jg+RjANBgkqhkiG9w0BAQsFADCBtzELMAkGA1UE
-BhMCRVMxGDAWBgNVBGEMD1ZBVEVTLVEyODYzMDEyRzE/MD0GA1UECgw2Q29sZWdpbyBkZSBSZWdp
-c3RyYWRvcmVzIGRlIGxhIFByb3BpZWRhZCB5IE1lcmNhbnRpbGVzMU0wSwYDVQQDDERURVNUIC0g
-QXV0b3JpZGFkIGRlIENlcnRpZmljYWNpw7NuIGRlIGxvcyBSZWdpc3RyYWRvcmVzIC0gQUMgSW50
-ZXJuYTAeFw0yNDA1MjgwNzMxMjlaFw0yNzA1MjgwNzMxMjlaMIG0MQswCQYDVQQGEwJFUzEYMBYG
-A1UEYQwPVkFURVMtUTI4NjMwMTJHMT8wPQYDVQQKDDZDb2xlZ2lvIGRlIFJlZ2lzdHJhZG9yZXMg
-ZGUgbGEgUHJvcGllZGFkIHkgTWVyY2FudGlsZXMxSjBIBgNVBAMMQUNPTEVHSU8gREUgUkVHSVNU
-UkFET1JFUyBERSBMQSBQUk9QSUVEQUQgWSBNRVJDQU5USUxFUyBERSBFU1BBw5FBMIIBIjANBgkq
-hkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAwnVGEdY/JW9yx3VKSX04LWcDIUtq4w8ZAcO5LlZUi9wp
-ouN646d2AEVs7jUS6emf3SM5Zkb5B3X4JcslreB7eqsdJYLksIEUZKmMMg1EIGoJ48bUXawOH/Vj
-Z2QJJ3pHfNI1j55Q89ffwkdbm9Jp5z1rNK7Z8oh/xJYLpdLwLGxZpZb8pcc6CEIe82NYi4FfToDb
-vi2uzxflxwKpKweMyq+rSfft2OmtBdmRM9oLk1zu3XEfKmSK1gDG74arRwBJDOqiMIXogfGKTScX
-Dgo8lIyjBd6n7djfU/CD10e+B0Cqxxt7PBFeazvz63XuEJJkmc9jqQMQTAI1DOZ6TIo9rwIDAQAB
-o4IErDCCBKgwagYDVR0RBGMwYYEbZXhwbG90YWNpb24uZmlybWFAY29ycG1lLmVzpEIwQDEaMBgG
-DCsGAQQBgYZ8AQEGAQwIb3BlcmFkb3IxIjAgBgwrBgEEAYGGfAEAAAEMEERPTUlDSUxJTywgMjgw
-MDEwDAYDVR0TAQH/BAIwADAOBgNVHQ8BAf8EBAMCA8gwHQYDVR0lBBYwFAYIKwYBBQUHAwIGCCsG
-AQUFBwMBMB0GA1UdDgQWBBS4B3jmNEO/r7Gh8ig5WH7LTwDMNTCBmAYIKwYBBQUHAQEEgYswgYgw
-LwYIKwYBBQUHMAGGI2h0dHA6Ly90ZXN0Lm9jc3AucmVnaXN0cmFkb3Jlcy5vcmcvMFUGCCsGAQUF
-BzAChklodHRwOi8vdGVzdC5wa2kucmVnaXN0cmFkb3Jlcy5vcmcvY2VydGlmaWNhZG9zL3Rlc3Rf
-YWNfaW50X3BzY19jb3JwbWUuY3J0MIIBFQYDVR0gBIIBDDCCAQgwggEEBgwrBgEEAYGGfAABAwIw
-gfMwPAYIKwYBBQUHAgEWMGh0dHA6Ly9wa2kucmVnaXN0cmFkb3Jlcy5vcmcvbm9ybWF0aXZhL2lu
-ZGV4Lmh0bTCBsgYIKwYBBQUHAgIwgaUMgaJDZXJ0aWZpY2FkbyBkZSBQcm9jZWRpbWllbnRvcyBS
-ZWdpc3RyYWxlcyBwYXJhIGVsIGVudG9ybm8gZGUgVGVzdCwgc3VqZXRvIGEgbGEgRFBDIGRlbCBD
-b2xlZ2lvIGRlIFJlZ2lzdHJhZG9yZXMgZGUgbGEgUHJvcGllZGFkIHkgTWVyY2FudGlsZXMgZGUg
-RXNwYcOxYSAowqkgMjAxNikwHwYDVR0jBBgwFoAU+2QItRNL/op4eTOrJfT+b4eID1QwggIHBgNV
-HR8EggH+MIIB+jCB+qCB96CB9IZCaHR0cDovL3Rlc3QucGtpLnJlZ2lzdHJhZG9yZXMub3JnL2Ny
-bHMvdGVzdF9jcmxfaW50X3BzY19jb3JwbWUuY3JshoGtbGRhcDovL3Rlc3QubGRhcC5yZWdpc3Ry
-YWRvcmVzLm9yZy9DTj1URVNUJTIwQUMlMjBJTlRFUk5BLE89Q29sZWdpbyUyMGRlJTIwUmVnaXN0
-cmFkb3JlcyUyMC0lMjBRMjg2MzAxMkcsQz1FUz9jZXJ0aWZpY2F0ZVJldm9jYXRpb25MaXN0P2Jh
-c2U/b2JqZWN0Y2xhc3M9Y1JMRGlzdHJpYnV0aW9uUG9pbnQwgfqggfeggfSGQmh0dHA6Ly90ZXN0
-LnBraS5yZWdpc3RyYWRvcmVzLm9yZy9jcmxzL3Rlc3RfY3JsX2ludF9wc2NfY29ycG1lLmNybIaB
-rWxkYXA6Ly90ZXN0LmxkYXAucmVnaXN0cmFkb3Jlcy5vcmcvQ049VEVTVCUyMEFDJTIwSU5URVJO
-QSxPPUNvbGVnaW8lMjBkZSUyMFJlZ2lzdHJhZG9yZXMlMjAtJTIwUTI4NjMwMTJHLEM9RVM/Y2Vy
-dGlmaWNhdGVSZXZvY2F0aW9uTGlzdD9iYXNlP29iamVjdGNsYXNzPWNSTERpc3RyaWJ1dGlvblBv
-aW50MA0GCSqGSIb3DQEBCwUAA4ICAQA3qbgRA0U/E5slFkDw5M+wRmsWwdRQ43yRWLCJmyYBQkIi
-nGrgnqRruynWZykVBsO0bgwkRQ37tLg7VR7sE+3kAS7h1olevLA+1lHXsHz5g5uggmM+PFEgMw9C
-tnq00a294Zqwi1gd6vJEy7bkyur6463hQHJ2zmS/nKztgljj1MLbESydBHoczMWu5HS7/wko7C52
-L2t+nYnw4TXK9qsZ4shUuTJU2BM45Zaldr2K49+GocDBGuDpifU0w/xGZopEm5SDWEFAGvktfGY9
-ftsdsl6dQDXTobrSh3iZOosG4KgYAJMyko7drTWouLa8Fh6dQS6rpV4uvwIbZ6bWoS8TY/wlTxsZ
-YRi07NX0Rx7zQ0sDXt91Amzgx4GTbGBzrBT8WMeW5Gnd+i+H9jKOFC08ziQoBU+z5hchSUZ4CttR
-t9PeH5+rHOS8teoUjYxokxb7rGnFRk8PnyMdSp9LHmzkt6fgRohEkwLs34shexUuQgBZldvj9w4e
-q+uj8Z8LOSreeYHeZ0uWds1sqRnL4TtvWaqM/TVwg3FVaLGVExR0R7V1KBc9osSJzokiW8ZbxZpk
-Vvde3sU1eCDjkdcDiPeP9xVYKoCGxyND4AILgQxR/cUaltlvfg1UgammFpdZqCbPBM1RNKGq3HvP
-o+xTwowRFTDh0L4N5gahG67IHkJz4Q==
-</ds:X509Certificate>
-      </ds:X509Data>
-    </ds:KeyInfo>
-  </ds:Signature>
+  
 </corpme-floti>`
     res.send(acuseXML);  // Envía el acuse de recibo XML
 });

@@ -8,6 +8,7 @@ const xml2js = require('xml2js');
 const builder = new xml2js.Builder();
 const axios = require('axios');
 const xmlparser = require('express-xml-bodyparser');
+const pdf = require('pdf-parse');
 const app = express();
 const upload = multer({ dest: 'uploads/' });
 const sql = require('mssql');
@@ -68,6 +69,33 @@ async function getIdUsuarioByIdPeticionAndIdVersion(idPeticion, idVersion) {
     return result.recordset.length > 0 ? result.recordset[0].idUsuario : null;
 }
 
+// Función para extraer CSV y Huella del PDF
+async function extractCodesFromPdf(pdfBuffer) {
+    try {
+        const data = await pdf(pdfBuffer);
+        const pdfText = data.text;
+
+        // Expresiones regulares para CSV y Huella
+        const csvRegex = /CSV\s*:\s*([A-Za-z0-9]+)/i;
+        const huellaRegex = /Huella\s*:\s*([a-f0-9\-]+)/i;
+
+        // Buscar los códigos CSV y Huella en el texto
+        const csvMatch = pdfText.match(csvRegex);
+        const huellaMatch = pdfText.match(huellaRegex);
+
+        const csvCode = csvMatch ? csvMatch[1] : null;
+        const huellaCode = huellaMatch ? huellaMatch[1] : null;
+
+        return {
+            csvCode: csvCode || 'No encontrado',
+            huellaCode: huellaCode || 'No encontrado'
+        };
+    } catch (error) {
+        console.error('Error al parsear el PDF:', error);
+        throw error;
+    }
+}
+
 async function fetchPendingRequests() {
     let resultadosTitular = [];  // Crea un array para almacenar las solicitudes por titular
     let resultadosIDUFIR = [];  // Crea un array para almacenar las solicitudes por IDUFIR
@@ -120,22 +148,17 @@ async function fetchPendingRequests() {
         }
         // idEstado = 6 Pendiente de petición de reenvío
         const peticionesReenvio = await sql.query`SELECT idPeticion, idVersion, idCorpme FROM peticiones WHERE idEstado = 6`;
-
         // Recorrer cada petición encontrada
         for (let i = 0; i < peticionesReenvio.recordset.length; i++) {
             const idPeticion = peticionesReenvio.recordset[i].idPeticion;
             const idVersion =  peticionesReenvio.recordset[i].idVersion;
             const idCorpme =  peticionesReenvio.recordset[i].idCorpme;
-
-            const datosSolicitud = await sql.query`SELECT * FROM datosSolicitud WHERE idPeticion = ${idPeticion} AND idVersion = ${idVersion}`;
-            if (datosSolicitud.recordset.length > 0) {
-                resultadosReenvio.push({
-                    idCorpme: idCorpme,  // Asumiendo que idCorpme está en la tabla peticiones
-                    idPeticion: idPeticion,
-                    idVersion: idVersion
-                });
-            }
-
+            resultadosReenvio.push({
+                idCorpme: idCorpme,  // Asumiendo que idCorpme está en la tabla peticiones
+                idPeticion: idPeticion,
+                idVersion: idVersion
+            });
+           
         }
 
         // Verificar si se encontraron resultados
@@ -186,7 +209,7 @@ async function sendXMLxTitular(resultados) {
         try {
             const parsedXml = await xml2js.parseStringPromise(xml);
             parsedXml['corpme-floti'].peticiones[0].peticion[0].titular[0].nif[0] = nifTitular;
-            parsedXml['corpme-floti'].peticiones[0].peticion[0].referencia = `RT${idPeticion}_${idVersion}`;
+            parsedXml['corpme-floti'].peticiones[0].peticion[0].referencia = `RT_${idPeticion}_${idVersion}`;
             parsedXml['corpme-floti'].peticiones[0].peticion[0].observaciones[0] = observaciones;
 
 
@@ -242,7 +265,7 @@ async function sendXMLxIDUFIR(resultados) {
             const parsedXml = await xml2js.parseStringPromise(xml);
             parsedXml['corpme-floti'].peticiones[0].peticion[0].idufir[0] = IDUFIR;
             parsedXml['corpme-floti'].peticiones[0].peticion[0].observaciones[0] = observaciones;
-            parsedXml['corpme-floti'].peticiones[0].peticion[0].referencia = `RI${idPeticion}_${idVersion}`;
+            parsedXml['corpme-floti'].peticiones[0].peticion[0].referencia = `RF_${idPeticion}_${idVersion}`;
    
             const newXml = builder.buildObject(parsedXml);
 
@@ -299,7 +322,7 @@ async function sendXMLxFinca(resultados) {
             parsedXml['corpme-floti'].peticiones[0].peticion[0]['datos-registrales'][0].seccion[0] = parseInt(seccion, 10);
             parsedXml['corpme-floti'].peticiones[0].peticion[0]['datos-registrales'][0].finca[0] = parseInt(finca, 10);
             parsedXml['corpme-floti'].peticiones[0].peticion[0].observaciones[0] = observaciones;
-            parsedXml['corpme-floti'].peticiones[0].peticion[0].referencia = `RF${idPeticion}_${idVersion}`;
+            parsedXml['corpme-floti'].peticiones[0].peticion[0].referencia = `RF_${idPeticion}_${idVersion}`;
 
             const newXml = builder.buildObject(parsedXml);
 
@@ -402,7 +425,7 @@ async function handleReceipt(receipt, idPeticion, idVersion) {
         const result = await sql.query`SELECT idUsuario FROM peticiones WHERE idPeticion = ${idPeticion} AND idVersion = ${idVersion}`;
         
         if (result.recordset.length > 0) {
-            idUsuario = result.recordset[0].idUsuario;
+            idUsuario = "CORPME";
         } else {
             logAction(`No se encontró un registro para idPeticion ${idPeticion} y idVersion ${idVersion}`);
             throw new Error(`No se encontró un registro para idPeticion ${idPeticion} y idVersion ${idVersion}`);
@@ -412,6 +435,7 @@ async function handleReceipt(receipt, idPeticion, idVersion) {
         if (receipt && receipt['corpme-floti'] && receipt['corpme-floti'].error) {
             // Se extrae el código de error
             const codigo = receipt['corpme-floti'].error[0]['$'].codigo;
+            console.log(codigo);
             const mensaje = receipt['corpme-floti'].error[0]['_'];
             console.error(`Error general en el XML recibido para ID ${idPeticion} ${idVersion}: ${mensaje} (Código ${codigo})`);
             logAction(`Error general en el XML recibido para ID ${idPeticion} ${idVersion}: ${mensaje} (Código ${codigo})`);
@@ -432,6 +456,7 @@ async function handleReceipt(receipt, idPeticion, idVersion) {
                 // Se verifica si el acuse contiene un error
                 if (acuse.error) {
                     const codigo = acuse.error[0]['$'].codigo;
+                    console.log(codigo);
                     const mensaje = acuse.error[0]['_'];
                     console.error(`Error específico en el acuse para ID ${idPeticion} ${idVersion}: ${mensaje} (Código ${codigo})`);
                     logAction(`Error específico en el acuse para ID ${idPeticion} ${idVersion}: ${mensaje} (Código ${codigo})`);
@@ -440,7 +465,7 @@ async function handleReceipt(receipt, idPeticion, idVersion) {
                     comentario = `Petición recibida por Registradores KO: idError: ${codigo} | ${mensaje}`;
 
                     // Se conecta a la base de datos y se actualiza el estado y el código de error
-                    await sql.connect(config);
+
                     await sql.query`UPDATE peticiones SET idEstado = 3, idError = ${codigo} WHERE idPeticion = ${idPeticion} AND idVersion = ${idVersion}`;
                     console.log(`Estado actualizado a 3 y error registrado para idPeticion ${idPeticion} y version ${idVersion}`);
                     logAction(`Estado actualizado a 3 y error registrado para idPeticion ${idPeticion} y version ${idVersion}`);
@@ -602,8 +627,8 @@ async function processReenvíoCorpmeFloti(xmlData) {
 
                     if (idPeticion && idVersion) {
                         const comentario = 'Recepción de NS por GT';
-                        const idUsuario = await getIdUsuarioByIdPeticionAndIdVersion(idPeticion, idVersion); // Obtén el idUsuario de la tabla
-
+                        //const idUsuario = await getIdUsuarioByIdPeticionAndIdVersion(idPeticion, idVersion); // Obtén el idUsuario de la tabla
+                        const idUsuario = "CORPME";
                         const idEstado = 5;
 
                         const query = `
@@ -664,8 +689,8 @@ async function processReenvíoCorpmeFloti(xmlData) {
                     if (idPeticion && idVersion) {
                         // Llamar al procedimiento con el comentario basado en informacion.texto
                         const comentario = informacion && informacion.texto ? informacion.texto[0] : 'Sin información adicional';
-                        const idUsuario = await getIdUsuarioByIdPeticionAndIdVersion(idPeticion, idVersion);
-
+                        //const idUsuario = await getIdUsuarioByIdPeticionAndIdVersion(idPeticion, idVersion);
+                        const idUsuario = "CORPME";
                         const idEstado = 7;
 
                             const query = `
@@ -723,8 +748,8 @@ async function processReenvíoCorpmeFloti(xmlData) {
                     
                         const textoTipoRespuesta = informacion && informacion.texto ? informacion.texto[0] : 'Sin información adicional';
                         const comentario = `Petición denegada por Registradores: idRespuesta: ${codigoTipoRespuesta} | ${textoIntermedio} | ${textoTipoRespuesta}`;
-                        const idUsuario = await getIdUsuarioByIdPeticionAndIdVersion(idPeticion, idVersion);
-
+                        //const idUsuario = await getIdUsuarioByIdPeticionAndIdVersion(idPeticion, idVersion);
+                        const idUsuario = "CORPME";
                         const idEstado = 4;
 
                             const query = `
@@ -875,6 +900,12 @@ async function processCorpmeFloti(xmlData, res) {
                     const query = `UPDATE peticiones SET pdf = @pdf, IdEstado = 5, idRespuesta = @codigoTipoRespuesta WHERE idCorpme = @idCorpme`;
                     const request = new sql.Request();
                     const pdfBuffer = Buffer.from(ficheroPdfBase64, 'base64');
+                    
+                    // Extraer CSV y Huella del PDF
+                    const { csvCode, huellaCode } = await extractCodesFromPdf(pdfBuffer);
+                    console.log('CSV encontrado:', csvCode);
+                    console.log('Huella encontrada:', huellaCode);
+                    
                     request.input('pdf', sql.VarBinary(sql.MAX), pdfBuffer);
                     request.input('idCorpme', sql.VarChar(50), identificador);
                     request.input('codigoTipoRespuesta', sql.Int, codigoTipoRespuesta);
@@ -889,9 +920,9 @@ async function processCorpmeFloti(xmlData, res) {
 
 
                     if (idPeticion && idVersion) {
-                        const comentario = 'Recepción de NS por GT';
-                        const idUsuario = await getIdUsuarioByIdPeticionAndIdVersion(idPeticion, idVersion); // Obtén el idUsuario de la tabla
-
+                        const comentario = `Recepción de NS por GT: CSV: ${csvCode} | Huella: ${huellaCode} `;
+                        //const idUsuario = await getIdUsuarioByIdPeticionAndIdVersion(idPeticion, idVersion); // Obtén el idUsuario de la tabla
+                        const idUsuario = "CORPME";
                         const idEstado = 5;
 
                         const query = `
@@ -959,8 +990,8 @@ async function processCorpmeFloti(xmlData, res) {
 
                     if (idPeticion && idVersion) {
                         const comentario = 'Recepción de NS por GT';
-                        const idUsuario = await getIdUsuarioByIdPeticionAndIdVersion(idPeticion, idVersion); // Obtén el idUsuario de la tabla
-
+                        //const idUsuario = await getIdUsuarioByIdPeticionAndIdVersion(idPeticion, idVersion); // Obtén el idUsuario de la tabla
+                        const idUsuario = "CORPME";
                         const idEstado = 5;
 
                         const query = `
@@ -1021,8 +1052,8 @@ async function processCorpmeFloti(xmlData, res) {
                     if (idPeticion && idVersion) {
                         // Llamar al procedimiento con el comentario basado en informacion.texto
                         const comentario = informacion && informacion.texto ? informacion.texto[0] : 'Sin información adicional';
-                        const idUsuario = await getIdUsuarioByIdPeticionAndIdVersion(idPeticion, idVersion);
-
+                        //const idUsuario = await getIdUsuarioByIdPeticionAndIdVersion(idPeticion, idVersion);
+                        const idUsuario = "CORPME";
                         const idEstado = 7;
 
                             const query = `
@@ -1098,8 +1129,8 @@ async function processCorpmeFloti(xmlData, res) {
                         }
                         const textoTipoRespuesta = informacion && informacion.texto ? informacion.texto[0] : 'Sin información adicional';
                         const comentario = `Petición denegada por Registradores: idRespuesta: ${codigoTipoRespuesta} | ${textoIntermedio} | ${textoTipoRespuesta}`;
-                        const idUsuario = await getIdUsuarioByIdPeticionAndIdVersion(idPeticion, idVersion);
-
+                        //const idUsuario = await getIdUsuarioByIdPeticionAndIdVersion(idPeticion, idVersion);
+                        const idUsuario = "CORPME";
                         const idEstado = 4;
 
                             const query = `

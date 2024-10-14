@@ -491,7 +491,7 @@ IFIvSW5mbyAxNSAwIFIvU2l6ZSAxNj4+CnN0YXJ0eHJlZgoyMDczMAolJUVPRgo=</fichero>
   </respuesta>
   
 </corpme-floti>`
-    res.send(acuseXML);  // Envía el acuse de recibo XML
+    res.send(reenviodeNotaSimple);  // Envía el acuse de recibo XML
 });
 
 app.listen(port, () => {

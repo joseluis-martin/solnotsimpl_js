@@ -26,6 +26,13 @@ const instance = axios.create({
     timeout: 10000  // Timeout de 5000 ms (5 segundos)
 });
 
+const CREDENCIALES = {
+    ENTIDAD: process.env.ENTIDAD,
+    GRUPO: process.env.GRUPO,
+    USUARIO: process.env.USUARIO,
+    EMAIL: process.env.EMAIL
+};
+
 // Middleware para parsear JSON en las respuestas entrantes
 app.use(express.json());
 
@@ -208,6 +215,14 @@ async function sendXMLxTitular(resultados) {
 
         try {
             const parsedXml = await xml2js.parseStringPromise(xml);
+
+            // Modificación del XML con los datos del archivo .env
+            parsedXml['corpme-floti'].peticiones[0].credenciales[0].entidad[0] = CREDENCIALES.ENTIDAD;
+            parsedXml['corpme-floti'].peticiones[0].credenciales[0].grupo[0] = CREDENCIALES.GRUPO;
+            parsedXml['corpme-floti'].peticiones[0].credenciales[0].usuario[0] = CREDENCIALES.USUARIO;
+            parsedXml['corpme-floti'].peticiones[0].credenciales[0].email[0] = CREDENCIALES.EMAIL;
+
+
             parsedXml['corpme-floti'].peticiones[0].peticion[0].titular[0].nif[0] = nifTitular;
             parsedXml['corpme-floti'].peticiones[0].peticion[0].referencia = `RT_${idPeticion}_${idVersion}`;
             parsedXml['corpme-floti'].peticiones[0].peticion[0].observaciones[0] = observaciones;
@@ -263,6 +278,13 @@ async function sendXMLxIDUFIR(resultados) {
 
         try {
             const parsedXml = await xml2js.parseStringPromise(xml);
+
+            // Modificación del XML con los datos del archivo .env
+            parsedXml['corpme-floti'].peticiones[0].credenciales[0].entidad[0] = CREDENCIALES.ENTIDAD;
+            parsedXml['corpme-floti'].peticiones[0].credenciales[0].grupo[0] = CREDENCIALES.GRUPO;
+            parsedXml['corpme-floti'].peticiones[0].credenciales[0].usuario[0] = CREDENCIALES.USUARIO;
+            parsedXml['corpme-floti'].peticiones[0].credenciales[0].email[0] = CREDENCIALES.EMAIL;
+
             parsedXml['corpme-floti'].peticiones[0].peticion[0].idufir[0] = IDUFIR;
             parsedXml['corpme-floti'].peticiones[0].peticion[0].observaciones[0] = observaciones;
             parsedXml['corpme-floti'].peticiones[0].peticion[0].referencia = `RF_${idPeticion}_${idVersion}`;
@@ -315,6 +337,13 @@ async function sendXMLxFinca(resultados) {
 
         try {
             const parsedXml = await xml2js.parseStringPromise(xml);
+            
+            // Modificación del XML con los datos del archivo .env
+            parsedXml['corpme-floti'].peticiones[0].credenciales[0].entidad[0] = CREDENCIALES.ENTIDAD;
+            parsedXml['corpme-floti'].peticiones[0].credenciales[0].grupo[0] = CREDENCIALES.GRUPO;
+            parsedXml['corpme-floti'].peticiones[0].credenciales[0].usuario[0] = CREDENCIALES.USUARIO;
+            parsedXml['corpme-floti'].peticiones[0].credenciales[0].email[0] = CREDENCIALES.EMAIL;
+
             // Convertir los valores a enteros antes de asignarlos
             parsedXml['corpme-floti'].peticiones[0].peticion[0]['datos-registrales'][0].registro[0] = parseInt(codigoRegistro, 10);
             parsedXml['corpme-floti'].peticiones[0].peticion[0]['datos-registrales'][0].municipio[0] = parseInt(municipio, 10);
@@ -395,7 +424,7 @@ async function sendXMLReenvio(resultados) {
                 logAction(`Solicitud de reenvío lanzada a ${url} y acuse recibido ok para idPeticion ${idPeticion} y version ${idVersion}`);
                 fs.writeFileSync(`./xml/acuseRecibido_${idPeticion}}_${idVersion}.xml`, response.data);
                 const receiptXml = await xml2js.parseStringPromise(response.data);
-                processReenvíoCorpmeFloti(receiptXml); // Los acuses de recibo del reenvío pueden ser directamente la nota simple.
+                processReenvíoCorpmeFloti(receiptXml, idPeticion, idVersion); // Los acuses de recibo del reenvío pueden ser directamente la nota simple.
             }
         } catch (error) {
             if (error.code === 'ECONNABORTED') {
@@ -525,7 +554,7 @@ async function handleReceipt(receipt, idPeticion, idVersion) {
 }
 
 // Función para procesar el XML de respuesta a una solicitud de reenvío
-async function processReenvíoCorpmeFloti(xmlData) {
+async function processReenvíoCorpmeFloti(xmlData, idPeticion, idVersion) {
     const corpmeFloti = xmlData['corpme-floti'];
     if (corpmeFloti && corpmeFloti.respuesta && corpmeFloti.respuesta.length > 0) {
         const respuesta = corpmeFloti.respuesta[0];
@@ -539,7 +568,7 @@ async function processReenvíoCorpmeFloti(xmlData) {
     
         // Extraer referencia que contiene RF_idPeticion_idVersion
         const referencia = respuesta.referencia ? respuesta.referencia[0] : null;
-        let idPeticion, idVersion;
+  /*      let idPeticion, idVersion;
 
         if (referencia) {
             const partesReferencia = referencia.split('_');
@@ -556,14 +585,15 @@ async function processReenvíoCorpmeFloti(xmlData) {
             logAction('Referencia no encontrada en la respuesta');
             return;
         }
+*/
 
         // Hacemos una copia del XML para modificarla antes de guardarla en la base de datos
         let xmlDataSinPdfNiFirma = JSON.parse(JSON.stringify(xmlData)); // Copia profunda del objeto original
 
 
         // Eliminar el campo <ds:signature> dentro de corpme-floti si existe en la copia del XML
-        if (xmlDataSinPdfNiFirma['corpme-floti'] && xmlDataSinPdfNiFirma['corpme-floti']['ds:signature']) {
-            delete xmlDataSinPdfNiFirma['corpme-floti']['ds:signature'];
+        if (xmlDataSinPdfNiFirma['corpme-floti'] && xmlDataSinPdfNiFirma['corpme-floti']['ds:Signature']) {
+            delete xmlDataSinPdfNiFirma['corpme-floti']['ds:Signature'];
         }
 
         // Eliminar el fichero PDF incrustado en la copia del XML
@@ -1266,10 +1296,6 @@ async function processCorpmeFlotiFacturacion(xmlData, res) {
     }
 }
 
-
-// Ruta de tu archivo .pfx y su contraseña QUITAR
-//const pfxPath = './Certificado_SSL/2024/certificate.pfx';
-//const pfxPassword = 'M4s72aKalo';
 
 // Opciones de HTTPS incluyendo el archivo .pfx y la contraseña
 const credentials = {

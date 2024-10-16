@@ -12,15 +12,15 @@ app.post('/xmlpeticion', (req, res) => {
     const acuseXML = `
     <corpme-floti xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://www.test.registradores.org/schema/floti/envio.xsd">
         <acuses id="acuses">
-            <credenciales>
-                <entidad>TASVALOR</entidad>
-                <grupo>Grupo Tasvalor S.A.</grupo>
-                <usuario>TASVALOR</usuario>
-                <email>joseluis.martin@uah.es</email>
-            </credenciales>
+                <credenciales>
+                    <entidad>GRUPO TASVALOR</entidad>
+                    <grupo>GRUPO TASVALOR, S.A.</grupo>
+                    <usuario>GTREGAPP</usuario>
+                    <email>jptrujillo@grupotasvalor.es</email>
+                </credenciales>
             <acuse>
-                <referencia>RF_X</referencia>
-                <identificador>Z16TT16Q</identificador>
+                <referencia>RF_17_1</referencia>
+                <identificador>Z16TT18K</identificador>
             </acuse>
         </acuses>
     </corpme-floti>
@@ -491,7 +491,7 @@ IFIvSW5mbyAxNSAwIFIvU2l6ZSAxNj4+CnN0YXJ0eHJlZgoyMDczMAolJUVPRgo=</fichero>
   </respuesta>
   
 </corpme-floti>`
-    res.send(reenviodeNotaSimple);  // Envía el acuse de recibo XML
+    res.send(acuseXML);  // Envía el acuse de recibo XML
 });
 
 app.listen(port, () => {

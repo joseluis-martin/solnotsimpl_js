@@ -1,3 +1,0 @@
-IP de Tasvalor: 85.50.218.142
-URL: https://tasaciones.grupotasvalor.es:5999/
-Respuesta: https://tasaciones.grupotasvalor.es:5999/spnts

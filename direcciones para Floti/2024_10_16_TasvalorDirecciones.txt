@@ -1,0 +1,3 @@
+IP de Tasvalor: 85.50.218.142
+URL: https://tasaciones.grupotasvalor.es:5999/
+Endpoint para el envío de respuestas e información de facturación: https://tasaciones.grupotasvalor.es:5999/spnts

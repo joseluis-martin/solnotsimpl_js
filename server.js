@@ -54,6 +54,29 @@ const config = {
     }
 };
 
+// Middleware de autenticación básica
+function basicAuth(req, res, next) {
+    const authHeader = req.headers.authorization;
+
+    if (!authHeader) {
+        res.setHeader('WWW-Authenticate', 'Basic');
+        return res.status(401).send('Autenticación requerida.');
+    }
+
+    const base64Credentials = authHeader.split(' ')[1];
+    const credentials = Buffer.from(base64Credentials, 'base64').toString('ascii');
+    const [username, password] = credentials.split(':');
+
+    if (username === process.env.ADMIN_USERNAME && password === process.env.ADMIN_PASSWORD) {
+        return next(); // Usuario autenticado
+    }
+
+    return res.status(401).send('Credenciales incorrectas.');
+}
+
+// Aplica autenticación a las rutas administrativas
+app.use(['/admin', '/status', '/logs', '/stop', '/restart'], basicAuth);
+
 
 function logAction(action) {
     const timestamp = new Date().toISOString();
@@ -337,7 +360,7 @@ async function sendXMLxFinca(resultados) {
 
         try {
             const parsedXml = await xml2js.parseStringPromise(xml);
-            
+
             // Modificación del XML con los datos del archivo .env
             parsedXml['corpme-floti'].peticiones[0].credenciales[0].entidad[0] = CREDENCIALES.ENTIDAD;
             parsedXml['corpme-floti'].peticiones[0].credenciales[0].grupo[0] = CREDENCIALES.GRUPO;
@@ -829,9 +852,55 @@ async function processReenvíoCorpmeFloti(xmlData, idPeticion, idVersion) {
     res.sendFile(path.join(__dirname, '/public/index.html'));
 });
 
-app.get('/ping', (req, res) => {
-    res.send('Pong!');
+// Ruta principal para servir la página de administración
+app.get('/admin', (req, res) => {
+    res.sendFile(path.join(__dirname, '/public/admin.html'));
 });
+
+// Ruta para ver el estado del servidor
+app.get('/status', (req, res) => {
+    const serverStatus = {
+        status: "running",
+        uptime: process.uptime(),
+        memoryUsage: process.memoryUsage(),
+        nodeVersion: process.version
+    };
+    res.json(serverStatus);
+});
+
+// Ruta para obtener logs con paginación
+app.get('/logs', (req, res) => {
+    const page = parseInt(req.query.page) || 1;  // Página actual, por defecto la primera
+    const linesPerPage = parseInt(req.query.limit) || 100;  // Número de líneas por página, por defecto 100
+
+    try {
+        const logContent = fs.readFileSync(logFilePath, 'utf8');  // Leer el archivo completo
+        const logLines = logContent.split('\n').filter(Boolean);  // Dividir en líneas y filtrar vacías
+
+        const totalLines = logLines.length;  // Total de líneas en el archivo de logs
+        const totalPages = Math.ceil(totalLines / linesPerPage);  // Total de páginas
+
+        if (page > totalPages) {
+            return res.status(404).send('Página no encontrada');
+        }
+
+        const startLine = (page - 1) * linesPerPage;  // Línea de inicio para la paginación
+        const endLine = Math.min(startLine + linesPerPage, totalLines);  // Línea final
+
+        const logsToShow = logLines.slice(startLine, endLine).join('\n');  // Logs de la página actual
+
+        res.json({
+            page: page,
+            totalPages: totalPages,
+            logs: logsToShow
+        });
+    } catch (error) {
+        console.error(`Error al leer el archivo de logs: ${error.message}`);
+        res.status(500).send('Error al leer el archivo de logs');
+    }
+});
+
+
 
 // Ruta para manejar solicitudes POST en /spnts
 app.post('/spnts', async (req, res) => {

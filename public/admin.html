@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Panel de Control del Servidor</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+        }
+        #logs {
+            width: 100%;
+            height: 300px;
+            border: 1px solid #ccc;
+            overflow-y: auto;
+            background-color: #f9f9f9;
+            padding: 10px;
+            white-space: pre-wrap;
+        }
+        button {
+            padding: 10px 20px;
+            margin-right: 10px;
+            background-color: #007bff;
+            color: white;
+            border: none;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+        .pagination {
+            margin-top: 10px;
+        }
+        .pagination button {
+            padding: 5px 10px;
+            margin-right: 5px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Panel de Control del Servidor</h1>
+
+    <h3>Estado del Servidor:</h3>
+    <pre id="status">Cargando...</pre>
+
+    <h3>Logs Recientes (Página <span id="currentPage">1</span>):</h3>
+    <div id="logs">Cargando logs...</div>
+    <div class="pagination">
+        <button id="prevPage">Página anterior</button>
+        <button id="nextPage">Página siguiente</button>
+    </div>
+
+    <!-- <button id="stopServer">Detener Servidor</button>
+    <button id="restartServer">Reiniciar Servidor</button> -->
+
+    <script>
+        let currentPage = 1;
+        let totalPages = 1;
+
+        async function getStatus() {
+            const response = await fetch('/status');
+            const data = await response.json();
+            document.getElementById('status').textContent = JSON.stringify(data, null, 2);
+        }
+
+        async function getLogs(page = 1) {
+            const response = await fetch(`/logs?page=${page}`);
+            const data = await response.json();
+
+            document.getElementById('logs').textContent = data.logs;
+            document.getElementById('currentPage').textContent = data.page;
+            totalPages = data.totalPages;
+        }
+
+        async function stopServer() {
+            const response = await fetch('/stop', { method: 'POST' });
+            const data = await response.json();
+            alert(data.message);
+        }
+
+        async function restartServer() {
+            const response = await fetch('/restart', { method: 'POST' });
+            const data = await response.json();
+            alert(data.message);
+        }
+
+        // document.getElementById('stopServer').addEventListener('click', stopServer);
+        // document.getElementById('restartServer').addEventListener('click', restartServer);
+
+        // Navegación de la paginación de los logs
+        document.getElementById('prevPage').addEventListener('click', () => {
+            if (currentPage > 1) {
+                currentPage--;
+                getLogs(currentPage);
+            }
+        });
+
+        document.getElementById('nextPage').addEventListener('click', () => {
+            if (currentPage < totalPages) {
+                currentPage++;
+                getLogs(currentPage);
+            }
+        });
+
+        // Actualiza el estado y los logs periódicamente
+        getStatus();
+        getLogs(currentPage);
+        setInterval(getStatus, 10000); // Actualizar cada 10 segundos
+    </script>
+</body>
+</html>

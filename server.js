@@ -11,6 +11,7 @@ const xmlparser = require('express-xml-bodyparser');
 const pdf = require('pdf-parse');
 const app = express();
 const upload = multer({ dest: 'uploads/' });
+const moment = require('moment');
 const sql = require('mssql');
 const logFilePath = './logs/actions.log';  // Ruta del archivo de log
 require('dotenv').config();
@@ -868,16 +869,33 @@ app.get('/status', (req, res) => {
     res.json(serverStatus);
 });
 
-// Ruta para obtener logs con paginación
+// Ruta para manejar logs con paginación y filtro por fecha
 app.get('/logs', (req, res) => {
     const page = parseInt(req.query.page) || 1;  // Página actual, por defecto la primera
     const linesPerPage = parseInt(req.query.limit) || 100;  // Número de líneas por página, por defecto 100
+
+    // Obtener la fecha de los parámetros o usar la fecha actual
+    const requestedDate = req.query.date ? moment(req.query.date, 'YYYY-MM-DD') : moment();
+
+    if (!requestedDate.isValid()) {
+        return res.status(400).send('Formato de fecha inválido. Utilice el formato YYYY-MM-DD.');
+    }
 
     try {
         const logContent = fs.readFileSync(logFilePath, 'utf8');  // Leer el archivo completo
         const logLines = logContent.split('\n').filter(Boolean);  // Dividir en líneas y filtrar vacías
 
-        const totalLines = logLines.length;  // Total de líneas en el archivo de logs
+        // Filtrar solo las líneas que coincidan con la fecha solicitada
+        const logsForDate = logLines.filter(line => {
+            const timestamp = line.match(/\[(.*?)\]/);  // Asumimos que el timestamp está entre corchetes [YYYY-MM-DDTHH:mm:ss]
+            if (timestamp) {
+                const logDate = moment(timestamp[1], 'YYYY-MM-DDTHH:mm:ss');
+                return logDate.isSame(requestedDate, 'day');  // Comparar solo la fecha, ignorar la hora
+            }
+            return false;
+        });
+
+        const totalLines = logsForDate.length;  // Total de líneas filtradas
         const totalPages = Math.ceil(totalLines / linesPerPage);  // Total de páginas
 
         if (page > totalPages) {
@@ -887,12 +905,13 @@ app.get('/logs', (req, res) => {
         const startLine = (page - 1) * linesPerPage;  // Línea de inicio para la paginación
         const endLine = Math.min(startLine + linesPerPage, totalLines);  // Línea final
 
-        const logsToShow = logLines.slice(startLine, endLine).join('\n');  // Logs de la página actual
+        const logsToShow = logsForDate.slice(startLine, endLine).join('\n');  // Logs de la página actual
 
         res.json({
             page: page,
             totalPages: totalPages,
-            logs: logsToShow
+            logs: logsToShow,
+            date: requestedDate.format('YYYY-MM-DD')
         });
     } catch (error) {
         console.error(`Error al leer el archivo de logs: ${error.message}`);

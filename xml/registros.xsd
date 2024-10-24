@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- edited with XMLSpy v2005 U (http://www.xmlspy.com) by any (Ru-Board) -->
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" elementFormDefault="qualified" attributeFormDefault="unqualified">
+  <xs:element name="registros">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="provincias">
+          <xs:complexType>
+            <xs:sequence>
+              <xs:element name="provincia" maxOccurs="unbounded">
+                <xs:complexType>
+                  <xs:sequence>
+                    <xs:element name="municipio" maxOccurs="unbounded">
+                      <xs:complexType>
+                        <xs:attribute name="codigo" type="xs:int" use="required"/>
+                        <xs:attribute name="codigo-ine" type="xs:int"/>
+                        <xs:attribute name="nombre" type="xs:string" use="required"/>
+                      </xs:complexType>
+                    </xs:element>
+                  </xs:sequence>
+                  <xs:attribute name="codigo" type="xs:int" use="required"/>
+                  <xs:attribute name="nombre" type="xs:string" use="required"/>
+                </xs:complexType>
+              </xs:element>
+            </xs:sequence>
+          </xs:complexType>
+        </xs:element>
+        <xs:element name="registro" maxOccurs="unbounded">
+          <xs:complexType>
+            <xs:sequence>
+              <xs:element name="seccion" maxOccurs="unbounded">
+                <xs:complexType>
+                  <xs:attribute name="numero-seccion" type="xs:int" use="required"/>
+                  <xs:attribute name="codigo-provincia" type="xs:int" use="required"/>
+                  <xs:attribute name="codigo-municipio" type="xs:int" use="required"/>
+                </xs:complexType>
+              </xs:element>
+            </xs:sequence>
+            <xs:attribute name="codigo" type="xs:int" use="required"/>
+            <xs:attribute name="nombre" type="xs:string" use="required"/>
+          </xs:complexType>
+        </xs:element>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+</xs:schema>

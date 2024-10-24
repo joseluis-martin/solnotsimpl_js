@@ -254,7 +254,7 @@ async function sendXMLxTitular(resultados) {
 
             // (Opcional) Guardar el XML en un archivo
             const newXml = builder.buildObject(parsedXml);
-            fs.writeFileSync(`./xml/peticion_x_titular_${idPeticion}_${idVersion}.xml`, newXml);
+            fs.writeFileSync(`./xml_enviados/peticion_x_titular_${idPeticion}_${idVersion}.xml`, newXml);
 
             // Conectar a la base de datos y guardar el XML en la tabla peticiones
             await sql.connect(config);
@@ -271,7 +271,7 @@ async function sendXMLxTitular(resultados) {
             const response = await instance(options);
             if (response.data) {
                 logAction(`Solicitud lanzada a ${url} x Titular y acuse recibido ok para idPeticion ${idPeticion} y version ${idVersion}`);
-                fs.writeFileSync(`./xml/acuseRecibido_${idPeticion}_${idVersion}.xml`, response.data);
+                fs.writeFileSync(`./xml_recibidos/acuseRecibido_${idPeticion}_${idVersion}.xml`, response.data);
                 const receiptXml = await xml2js.parseStringPromise(response.data);
                 handleReceipt(receiptXml, idPeticion, idVersion);
             }
@@ -316,7 +316,7 @@ async function sendXMLxIDUFIR(resultados) {
             const newXml = builder.buildObject(parsedXml);
 
             // (Opcional) Guardar el XML en un archivo 
-            fs.writeFileSync(`./xml/peticion_x_idufir_${idPeticion}_${idVersion}.xml`, newXml);
+            fs.writeFileSync(`./xml_enviados/peticion_x_idufir_${idPeticion}_${idVersion}.xml`, newXml);
 
             // Conectar a la base de datos y guardar el XML en la tabla peticiones
             await sql.connect(config);
@@ -333,7 +333,7 @@ async function sendXMLxIDUFIR(resultados) {
             const response = await instance(options);
             if (response.data) {
                 logAction(`Solicitud lanzada a ${url} x IDUFIR y acuse recibido ok para idPeticion ${idPeticion} y version ${idVersion}`);
-                fs.writeFileSync(`./xml/acuseRecibido_${idPeticion}_${idVersion}.xml`, response.data);
+                fs.writeFileSync(`./xml_recibidos/acuseRecibido_${idPeticion}_${idVersion}.xml`, response.data);
                 const receiptXml = await xml2js.parseStringPromise(response.data);
                 handleReceipt(receiptXml, idPeticion, idVersion);
             }
@@ -380,7 +380,7 @@ async function sendXMLxFinca(resultados) {
             const newXml = builder.buildObject(parsedXml);
 
             // (Opcional) Guardar el XML en un archivo
-            fs.writeFileSync(`./xml/peticion_x_finca_${idPeticion}_${idVersion}.xml`, newXml);
+            fs.writeFileSync(`./xml_enviados/peticion_x_finca_${idPeticion}_${idVersion}.xml`, newXml);
 
             // Conectar a la base de datos y guardar el XML en la tabla peticiones
             await sql.connect(config);
@@ -397,7 +397,7 @@ async function sendXMLxFinca(resultados) {
             const response = await instance(options);
             if (response.data) {
                 logAction(`Solicitud lanzada a ${url} x Finca y acuse recibido ok para idPeticion ${idPeticion} y version ${idVersion}`);
-                fs.writeFileSync(`./xml/acuseRecibido_${idPeticion}_${idVersion}.xml`, response.data);
+                fs.writeFileSync(`./xml_recibidos/acuseRecibido_${idPeticion}_${idVersion}.xml`, response.data);
                 const receiptXml = await xml2js.parseStringPromise(response.data);
                 handleReceipt(receiptXml, idPeticion, idVersion);
             }
@@ -429,7 +429,7 @@ async function sendXMLReenvio(resultados) {
             // parsedXml['corpme-floti'].peticiones[0].referencia = `RR${idPeticion}${idVersion}`;
             const newXml = builder.buildObject(parsedXml);
 
-            fs.writeFileSync(`./xml/peticion_reenvio_${idPeticion}_${idVersion}.xml`, newXml);
+            fs.writeFileSync(`./xml_enviados/peticion_reenvio_${idPeticion}_${idVersion}.xml`, newXml);
 
             // Conectar a la base de datos y guardar el XML en la tabla peticiones
             await sql.connect(config);
@@ -446,7 +446,7 @@ async function sendXMLReenvio(resultados) {
             const response = await instance(options);
             if (response.data) {
                 logAction(`Solicitud de reenvío lanzada a ${url} y acuse recibido ok para idPeticion ${idPeticion} y version ${idVersion}`);
-                fs.writeFileSync(`./xml/acuseRecibido_${idPeticion}}_${idVersion}.xml`, response.data);
+                fs.writeFileSync(`./xml_recibidos/acuseRecibido_${idPeticion}}_${idVersion}.xml`, response.data);
                 const receiptXml = await xml2js.parseStringPromise(response.data);
                 processReenvíoCorpmeFloti(receiptXml, idPeticion, idVersion); // Los acuses de recibo del reenvío pueden ser directamente la nota simple.
             }

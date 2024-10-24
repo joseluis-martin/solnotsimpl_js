@@ -1,0 +1,114 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- edited with XMLSpy v2013 (http://www.altova.com) by  () -->
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" xmlns:ds="http://www.w3.org/2000/09/xmldsig#" elementFormDefault="qualified" attributeFormDefault="unqualified">
+  <xs:import namespace="http://www.w3.org/2000/09/xmldsig#" schemaLocation="http://www.registradores.org/schema/externos/xmldsig-core-schema.xsd"/>
+  <xs:element name="corpme-floti-facturacion">
+    <xs:annotation>
+      <xs:documentation>Elemento raíz</xs:documentation>
+    </xs:annotation>
+    <xs:complexType>
+      <xs:choice>
+        <xs:sequence>
+          <xs:element name="facturacion">
+            <xs:complexType>
+              <xs:sequence>
+                <xs:element ref="factura" maxOccurs="unbounded"/>
+              </xs:sequence>
+              <xs:attribute name="id" type="xs:ID" use="required"/>
+              <xs:attribute name="importe-base" type="dinero" use="required"/>
+              <xs:attribute name="importe-impuesto" type="dinero" use="required"/>
+              <xs:attribute name="periodo-inicio" type="xs:date" use="required"/>
+              <xs:attribute name="periodo-fin" type="xs:date" use="required"/>
+            </xs:complexType>
+          </xs:element>
+          <xs:element ref="ds:Signature"/>
+        </xs:sequence>
+        <xs:element name="error">
+          <xs:complexType>
+            <xs:simpleContent>
+              <xs:extension base="xs:string">
+                <xs:attribute name="codigo" use="required"/>
+              </xs:extension>
+            </xs:simpleContent>
+          </xs:complexType>
+        </xs:element>
+        <xs:element name="ok">
+          <xs:complexType/>
+        </xs:element>
+      </xs:choice>
+      <xs:attribute name="id" type="xs:ID" use="required"/>
+    </xs:complexType>
+  </xs:element>
+  <xs:element name="factura">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="emisor" type="actor"/>
+        <xs:element name="destinatario" type="actor"/>
+        <xs:element name="importe">
+          <xs:complexType>
+            <xs:attribute name="base" type="dinero" use="required"/>
+            <xs:attribute name="impuesto" type="dinero" use="required"/>
+            <xs:attribute name="irpf" type="dinero" use="required"/>
+            <xs:attribute name="total" type="dinero" use="required"/>
+          </xs:complexType>
+        </xs:element>
+        <xs:element ref="peticion" maxOccurs="unbounded"/>
+      </xs:sequence>
+      <xs:attribute name="serie" type="xs:string" use="required"/>
+      <xs:attribute name="numero" type="xs:integer" use="required"/>
+      <xs:attribute name="ejercicio" type="xs:int" use="required"/>
+      <xs:attribute name="fecha" type="xs:date" use="required"/>
+      <xs:attribute name="regimen-caja" type="xs:boolean">
+        <xs:annotation>
+          <xs:documentation>Indica si la factura se ha generado acogiéndose al régimen especial de caja. Si no está presente, se asume que es false.</xs:documentation>
+        </xs:annotation>
+      </xs:attribute>
+    </xs:complexType>
+  </xs:element>
+  <xs:complexType name="actor">
+    <xs:attribute name="nombre" type="xs:string" use="required"/>
+    <xs:attribute name="nif" type="xs:string" use="required"/>
+    <xs:attribute name="domicilio" type="xs:string" use="required"/>
+    <xs:attribute name="municipio" type="xs:string" use="required"/>
+    <xs:attribute name="provincia" type="xs:string" use="required"/>
+    <xs:attribute name="cp" type="xs:int" use="required"/>
+  </xs:complexType>
+  <xs:simpleType name="dinero">
+    <xs:restriction base="xs:decimal">
+      <xs:fractionDigits value="2"/>
+    </xs:restriction>
+  </xs:simpleType>
+  <xs:element name="peticion">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="arancel" minOccurs="0" maxOccurs="unbounded">
+          <xs:complexType>
+            <xs:simpleContent>
+              <xs:extension base="xs:string">
+                <xs:attribute name="importe" type="dinero" use="required"/>
+                <xs:attribute name="veces-aplicado" type="xs:int"/>
+              </xs:extension>
+            </xs:simpleContent>
+          </xs:complexType>
+        </xs:element>
+      </xs:sequence>
+      <xs:attribute name="id" type="xs:string" use="required"/>
+      <xs:attribute name="grupo" type="xs:string" use="required"/>
+      <xs:attribute name="usuario" type="xs:string" use="required"/>
+      <xs:attribute name="fecha" type="xs:dateTime" use="required"/>
+      <xs:attribute name="fecha-respuesta" type="xs:dateTime" use="required"/>
+      <xs:attribute name="tipo" type="xs:int" use="required"/>
+      <xs:attribute name="importe-base" type="dinero" use="required"/>
+      <xs:attribute name="porcentaje-impuesto" use="required">
+        <xs:simpleType>
+          <xs:restriction base="xs:decimal">
+            <xs:fractionDigits value="2"/>
+            <xs:totalDigits value="2"/>
+          </xs:restriction>
+        </xs:simpleType>
+      </xs:attribute>
+      <xs:attribute name="destino" type="xs:string" use="required"/>
+      <xs:attribute name="referencia" type="xs:string" use="required"/>
+    </xs:complexType>
+  </xs:element>
+</xs:schema>

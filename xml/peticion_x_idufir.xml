@@ -1,0 +1,17 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<corpme-floti xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://www.registradores.org/schema/floti/envio.xsd">
+  <peticiones>
+    <credenciales>
+        <entidad>TASVALOR</entidad>
+        <grupo><![CDATA[Grupo Tasvalor S.A.]]></grupo>
+        <usuario>TASVALOR</usuario>
+        <email><![CDATA[joseluis.martin@uah.es]]></email>
+    </credenciales>
+    <peticion>
+        <tipo-info tipo="0"/>
+        <idufir idufir = "0"/>
+        <referencia>RI2</referencia>
+        <observaciones></observaciones>
+    </peticion>
+  </peticiones>
+</corpme-floti>

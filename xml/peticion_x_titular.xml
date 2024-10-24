@@ -1,0 +1,27 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<corpme-floti xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="https://www.registradores.org/schema/floti/envio.xsd">
+  <peticiones>
+    <credenciales>
+        <entidad>TASVALOR</entidad>
+        <grupo><![CDATA[Grupo Tasvalor S.A.]]></grupo>
+        <usuario>TASVALOR</usuario>
+        <email><![CDATA[joseluis.martin@uah.es]]></email>
+    </credenciales>
+    <peticion>
+        <tipo-info tipo="0"/>
+        <titular>
+            <nif>01933046B</nif>
+            <nombre><![CDATA[José Luis]]></nombre>
+            <apellidos><![CDATA[Martín Sánchez]]></apellidos>
+            <restriccion-geografica>
+                <autonomia>14</autonomia>
+            </restriccion-geografica>
+            <max-fincas>1</max-fincas>
+            <tipo>0</tipo>
+            <derecho>0</derecho>
+        </titular>
+        <referencia>RT2</referencia>
+        <observaciones></observaciones>
+    </peticion>
+  </peticiones>
+</corpme-floti>

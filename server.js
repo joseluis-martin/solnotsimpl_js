@@ -671,7 +671,7 @@ async function processReenvíoCorpmeFloti(xmlData, idPeticion, idVersion) {
         console.log(codigoTipoRespuesta, textoTipoRespuesta);
 
         if (codigoTipoRespuesta === '11') {
-        // Si tipo-respuesta es 10, es la nota simple reenviada
+        // Si tipo-respuesta es 11, es la nota simple reenviada
             let ficheroPdfBase64;
             if (informacion && informacion.fichero && informacion.fichero.length > 0) {
                 ficheroPdfBase64 = informacion.fichero[0]['_'];
@@ -689,7 +689,7 @@ async function processReenvíoCorpmeFloti(xmlData, idPeticion, idVersion) {
                     request.input('codigoTipoRespuesta', sql.Int, codigoTipoRespuesta);
                     await request.query(query);
 
-                    console.log('(Reenvio) PDF guardado en la base de datos exitosamente.');
+                    console.log('(Reenvio síncrono) PDF guardado en la base de datos exitosamente.');
 
                     const comentario = 'Recepción de NS por GT';
                     const idUsuario = "CORPME";
@@ -717,8 +717,8 @@ async function processReenvíoCorpmeFloti(xmlData, idPeticion, idVersion) {
                     logAction(`PDF de nota simple reenviada guardado en la base de datos exitosamente para idCorpme: ${identificador}, idPeticion: ${idPeticion} e idVersion: ${idVersion}`);
 
 
-                    // Leer y enviar XML de confirmación
-                    const confirmacionXml = fs.readFileSync(path.join(__dirname, 'xml/corpme_floti_ok.xml'), 'utf8');
+                    // Leer y enviar XML de confirmación. 
+                    // const confirmacionXml = fs.readFileSync(path.join(__dirname, 'xml/corpme_floti_ok.xml'), 'utf8');
                     // res.set('Content-Type', 'text/xml');
                     // res.send(confirmacionXml);
 
@@ -791,7 +791,7 @@ async function processReenvíoCorpmeFloti(xmlData, idPeticion, idVersion) {
                 try {
                     await sql.connect(config);
                     // Guardar tipo-respuesta en la tabla peticiones
-                    const query = `UPDATE peticiones SET IdEstado = 7, idRespuesta = @codigoTipoRespuesta WHERE idCorpme = @idCorpmeAND idPeticion = @idPeticion AND idVersion = @idVersion`;
+                    const query = `UPDATE peticiones SET IdEstado = 7, idRespuesta = @codigoTipoRespuesta WHERE idCorpme = @idCorpme AND idPeticion = @idPeticion AND idVersion = @idVersion`;
                     const request = new sql.Request();
                     request.input('codigoTipoRespuesta', sql.Int, codigoTipoRespuesta); 
                     request.input('idCorpme', sql.VarChar(50), identificador);
@@ -827,7 +827,7 @@ async function processReenvíoCorpmeFloti(xmlData, idPeticion, idVersion) {
                         requestHistory.input('comentario', sql.VarChar(200), comentario);
             
                         await request.query(queryHistory);
-                        logAction(`Petición Reenvío denegada por Registradores: idRespuesta: ${codigoTipoRespuesta} | ${textoIntermedio} | ${textoTipoRespuesta} | idCorpme: ${identificador} | idPeticion: ${idPeticion} | idVersion:${idPeticion}.`);
+                        logAction(`Petición Reenvío denegada por Registradores para solicitud de reenvío: idRespuesta: ${codigoTipoRespuesta} | ${textoIntermedio} | ${textoTipoRespuesta} | idCorpme: ${identificador} | idPeticion: ${idPeticion} | idVersion:${idPeticion}.`);
 
 
                     // Enviar confirmación sin el procesamiento del PDF
@@ -1082,33 +1082,31 @@ async function processCorpmeFloti(xmlData, res) {
                 }
             }
         } else if (codigoTipoRespuesta === '11') {
-        // Si tipo-respuesta es 10, es la nota simple reenviada
+        // Si tipo-respuesta es 11, es la nota simple reenviada
             let ficheroPdfBase64;
             if (informacion && informacion.fichero && informacion.fichero.length > 0) {
                 ficheroPdfBase64 = informacion.fichero[0]['_'];
 
                 try {
+
+                    const idPeticion = await getIdPeticionByIdCorpme(identificador);  // Función para obtener idPeticion
+                    const idVersion = await getIdVersionByIdCorpme(identificador);    // Función para obtener idVersion
                     // Conexión a la base de datos
                     await sql.connect(config);
-                    const query = `UPDATE peticiones SET pdf = @pdf, IdEstado = 5, idRespuesta = @codigoTipoRespuesta WHERE idCorpme = @idCorpme`;
+                    const query = `UPDATE peticiones SET pdf = @pdf, IdEstado = 5, idRespuesta = @codigoTipoRespuesta WHERE idCorpme = @idCorpme AND idPeticion = @idPeticion AND idVersion = @idVersion`;
                     const request = new sql.Request();
                     const pdfBuffer = Buffer.from(ficheroPdfBase64, 'base64');
                     request.input('pdf', sql.VarBinary(sql.MAX), pdfBuffer);
                     request.input('idCorpme', sql.VarChar(50), identificador);
+                    request.input('idPeticion', sql.Int, idPeticion);
+                    request.input('idVersion', sql.SmallInt, idVersion);
                     request.input('codigoTipoRespuesta', sql.Int, codigoTipoRespuesta);
                     await request.query(query);
 
-                    console.log(identificador);
-                    console.log('PDF guardado en la base de datos exitosamente.');
-
-                    // Se llama al procedure notassimples.peticiones_historia_new
-                    const idPeticion = await getIdPeticionByIdCorpme(identificador);  // Función para obtener idPeticion
-                    const idVersion = await getIdVersionByIdCorpme(identificador);    // Función para obtener idVersion
-
+                    console.log('(Reenvio asíncrono) PDF guardado en la base de datos exitosamente.');
 
                     if (idPeticion && idVersion) {
                         const comentario = 'Recepción de NS por GT';
-                        //const idUsuario = await getIdUsuarioByIdPeticionAndIdVersion(idPeticion, idVersion); // Obtén el idUsuario de la tabla
                         const idUsuario = "CORPME";
                         const idEstado = 5;
 
@@ -1131,7 +1129,7 @@ async function processCorpmeFloti(xmlData, res) {
             
                         await request.query(query);
 
-                        logAction(`PDF de nota simple reenviada guardado en la base de datos exitosamente para idCorpme: ${identificador}, idPeticion: ${idPeticion} e idVersion: ${idVersion}`);
+                        logAction(`PDF de nota simple reenviada de manera asíncrona guardado en la base de datos exitosamente para idCorpme: ${identificador}, idPeticion: ${idPeticion} e idVersion: ${idVersion}`);
 
                     } else {
                         console.error('No se encontraron idPeticion o idVersion asociados con el identificador corpme');
@@ -1155,22 +1153,27 @@ async function processCorpmeFloti(xmlData, res) {
             if (codigoTipoRespuesta === '12') {
             // Nota simple reenviada negativa
                 try {
-                    await sql.connect(config);
-                    // Guardar tipo-respuesta en la tabla peticiones
-                    const query = `UPDATE peticiones SET IdEstado = 7, idRespuesta = @codigoTipoRespuesta WHERE idCorpme = @idCorpme`;
-                    const request = new sql.Request();
-                    request.input('codigoTipoRespuesta', sql.Int, codigoTipoRespuesta); 
-                    request.input('idCorpme', sql.VarChar(50), identificador);
-                    await request.query(query);
 
                     // Obtener idPeticion y idVersion
                     const idPeticion = await getIdPeticionByIdCorpme(identificador);
                     const idVersion = await getIdVersionByIdCorpme(identificador);
+                    await sql.connect(config);
+                    // Guardar tipo-respuesta en la tabla peticiones
+                    const query = `UPDATE peticiones SET IdEstado = 7, idRespuesta = @codigoTipoRespuesta WHERE idCorpme = @idCorpme AND idPeticion = @idPeticion AND idVersion = @idVersion`;
+                    const request = new sql.Request();
+                    request.input('codigoTipoRespuesta', sql.Int, codigoTipoRespuesta); 
+                    request.input('idCorpme', sql.VarChar(50), identificador);
+                    request.input('idPeticion', sql.Int, idPeticion);
+                    request.input('idVersion', sql.SmallInt, idVersion);
+                    await request.query(query);
 
                     if (idPeticion && idVersion) {
                         // Llamar al procedimiento con el comentario basado en informacion.texto
-                        const comentario = informacion && informacion.texto ? informacion.texto[0] : 'Sin información adicional';
-                        //const idUsuario = await getIdUsuarioByIdPeticionAndIdVersion(idPeticion, idVersion);
+                        let textoIntermedio;
+                        textoIntermedio = 'Desconocido';
+                    
+                        const textoTipoRespuesta = informacion && informacion.texto ? informacion.texto[0] : 'Sin información adicional';
+                        const comentario = `Petición denegada por Registradores: idRespuesta: ${codigoTipoRespuesta} | ${textoIntermedio} | ${textoTipoRespuesta}`;
                         const idUsuario = "CORPME";
                         const idEstado = 7;
 
@@ -1192,7 +1195,7 @@ async function processCorpmeFloti(xmlData, res) {
                             request.input('comentario', sql.VarChar(200), comentario);
                 
                             await request.query(query);
-                            logAction(`Recibida respuesta negativa para solicitud de reenvío: ${identificador}, idPeticion: ${idPeticion} e idVersion: ${idVersion}. ${comentario}`);
+                            logAction(`Recibida respuesta negativa asíncrona para solicitud de nota simple: idRespuesta: ${codigoTipoRespuesta} | ${textoIntermedio} | ${textoTipoRespuesta} | idCorpme: ${identificador} | idPeticion: ${idPeticion} | idVersion:${idPeticion}.`);
                     } else {
                         console.error('No se encontraron idPeticion o idVersion asociados con el identificador corpme');
                         logAction(`No se encontraron idPeticion o idVersion asociados con el identificador corpme`);

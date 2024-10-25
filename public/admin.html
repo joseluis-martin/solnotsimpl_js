@@ -117,14 +117,22 @@
             const data = await response.json();
 
             if (data.logs) {
+                // Si hay logs, los mostramos
                 document.getElementById('logs').textContent = data.logs;
                 document.getElementById('currentPage').textContent = data.page;
                 document.getElementById('totalPages').textContent = data.totalPages; // Actualizar el total de páginas
                 totalPages = data.totalPages;
+            } else if (data.message) {
+                // Si no hay logs, mostramos el mensaje personalizado
+                document.getElementById('logs').textContent = data.message;
+                document.getElementById('currentPage').textContent = 1;
+                document.getElementById('totalPages').textContent = 1;
             } else {
+                // Si hay algún error o no se pudo cargar, mostramos este mensaje
                 document.getElementById('logs').textContent = 'Error al cargar logs.';
             }
         }
+
 
         document.getElementById('loadLogsByDate').addEventListener('click', () => {
             currentDate = document.getElementById('logDate').value;

@@ -107,7 +107,7 @@ async function extractCodesFromPdf(pdfBuffer) {
         const pdfText = data.text;
 
         // Expresiones regulares para CSV y Huella
-        const csvRegex = /CSV\s*:\s*([A-Za-z0-9]+)/i;
+        const csvRegex = /C\.?S\.?V\.?\s*:\s*([A-Za-z0-9]+)/i;
         const huellaRegex = /Huella\s*:\s*([a-f0-9\-]+)/i;
 
         // Buscar los códigos CSV y Huella en el texto
@@ -244,8 +244,18 @@ async function sendXMLxTitular(resultados) {
             parsedXml['corpme-floti'].peticiones[0].credenciales[0].entidad[0] = CREDENCIALES.ENTIDAD;
             parsedXml['corpme-floti'].peticiones[0].credenciales[0].grupo[0] = CREDENCIALES.GRUPO;
             parsedXml['corpme-floti'].peticiones[0].credenciales[0].usuario[0] = CREDENCIALES.USUARIO;
-            parsedXml['corpme-floti'].peticiones[0].credenciales[0].email[0] = CREDENCIALES.EMAIL;
+            
+            //parsedXml['corpme-floti'].peticiones[0].credenciales[0].email[0] = CREDENCIALES.EMAIL;
 
+            // Obtener email del usuario de la base de datos con la función  usar valor predeterminado
+            await sql.connect(config);
+            const usuario = parsedXml['corpme-floti'].peticiones[0].credenciales[0].usuario[0];
+            const result = await sql.query`
+                SELECT notassimples.get_email_usuario(${usuario}) AS email
+            `;
+
+            // Asignar el correo electrónico, o valor predeterminado si es nulo
+            parsedXml['corpme-floti'].peticiones[0].credenciales[0].email[0] = result.recordset[0]?.email || 'joseluis.martin@uah.es';
 
             parsedXml['corpme-floti'].peticiones[0].peticion[0].titular[0].nif[0] = nifTitular;
             parsedXml['corpme-floti'].peticiones[0].peticion[0].referencia = `RT_${idPeticion}_${idVersion}`;
@@ -307,7 +317,18 @@ async function sendXMLxIDUFIR(resultados) {
             parsedXml['corpme-floti'].peticiones[0].credenciales[0].entidad[0] = CREDENCIALES.ENTIDAD;
             parsedXml['corpme-floti'].peticiones[0].credenciales[0].grupo[0] = CREDENCIALES.GRUPO;
             parsedXml['corpme-floti'].peticiones[0].credenciales[0].usuario[0] = CREDENCIALES.USUARIO;
-            parsedXml['corpme-floti'].peticiones[0].credenciales[0].email[0] = CREDENCIALES.EMAIL;
+ 
+            //parsedXml['corpme-floti'].peticiones[0].credenciales[0].email[0] = CREDENCIALES.EMAIL;
+
+            // Obtener email del usuario de la base de datos con la función  usar valor predeterminado
+            await sql.connect(config);
+            const usuario = parsedXml['corpme-floti'].peticiones[0].credenciales[0].usuario[0];
+            const result = await sql.query`
+                SELECT notassimples.get_email_usuario(${usuario}) AS email
+            `;
+
+            // Asignar el correo electrónico, o valor predeterminado si es nulo
+            parsedXml['corpme-floti'].peticiones[0].credenciales[0].email[0] = result.recordset[0]?.email || 'joseluis.martin@uah.es';
 
             parsedXml['corpme-floti'].peticiones[0].peticion[0].idufir[0] = IDUFIR;
             parsedXml['corpme-floti'].peticiones[0].peticion[0].observaciones[0] = observaciones;
@@ -366,7 +387,18 @@ async function sendXMLxFinca(resultados) {
             parsedXml['corpme-floti'].peticiones[0].credenciales[0].entidad[0] = CREDENCIALES.ENTIDAD;
             parsedXml['corpme-floti'].peticiones[0].credenciales[0].grupo[0] = CREDENCIALES.GRUPO;
             parsedXml['corpme-floti'].peticiones[0].credenciales[0].usuario[0] = CREDENCIALES.USUARIO;
-            parsedXml['corpme-floti'].peticiones[0].credenciales[0].email[0] = CREDENCIALES.EMAIL;
+ 
+            //parsedXml['corpme-floti'].peticiones[0].credenciales[0].email[0] = CREDENCIALES.EMAIL;
+
+            // Obtener email del usuario de la base de datos con la función  usar valor predeterminado
+            await sql.connect(config);
+            const usuario = parsedXml['corpme-floti'].peticiones[0].credenciales[0].usuario[0];
+            const result = await sql.query`
+                SELECT notassimples.get_email_usuario(${usuario}) AS email
+            `;
+
+            // Asignar el correo electrónico, o valor predeterminado si es nulo
+            parsedXml['corpme-floti'].peticiones[0].credenciales[0].email[0] = result.recordset[0]?.email || 'joseluis.martin@uah.es';
 
             // Convertir los valores a enteros antes de asignarlos
             parsedXml['corpme-floti'].peticiones[0].peticion[0]['datos-registrales'][0].registro[0] = parseInt(codigoRegistro, 10);
@@ -871,10 +903,10 @@ app.get('/status', (req, res) => {
 
 // Ruta para manejar logs con paginación y filtro por fecha
 app.get('/logs', (req, res) => {
-    const page = parseInt(req.query.page) || 1;  // Página actual, por defecto la primera
-    const linesPerPage = parseInt(req.query.limit) || 100;  // Número de líneas por página, por defecto 100
+    const page = parseInt(req.query.page) || 1;  // Página actual
+    const linesPerPage = parseInt(req.query.limit) || 100;  // Líneas por página
 
-    // Obtener la fecha de los parámetros o usar la fecha actual
+    // Obtener la fecha solicitada o la fecha actual
     const requestedDate = req.query.date ? moment(req.query.date, 'YYYY-MM-DD') : moment();
 
     if (!requestedDate.isValid()) {
@@ -890,13 +922,23 @@ app.get('/logs', (req, res) => {
             const timestamp = line.match(/\[(.*?)\]/);  // Asumimos que el timestamp está entre corchetes [YYYY-MM-DDTHH:mm:ss]
             if (timestamp) {
                 const logDate = moment(timestamp[1], 'YYYY-MM-DDTHH:mm:ss');
-                return logDate.isSame(requestedDate, 'day');  // Comparar solo la fecha, ignorar la hora
+                return logDate.isSame(requestedDate, 'day');  // Comparar solo la fecha
             }
             return false;
         });
 
         const totalLines = logsForDate.length;  // Total de líneas filtradas
         const totalPages = Math.ceil(totalLines / linesPerPage);  // Total de páginas
+
+        if (totalLines === 0) {
+            return res.json({
+                page: 1,
+                totalPages: 1,
+                logs: null,  // Indicamos que no hay logs
+                date: requestedDate.format('YYYY-MM-DD'),
+                message: 'No hay registros disponibles en esta fecha'  // Mensaje especial cuando no hay logs
+            });
+        }
 
         if (page > totalPages) {
             return res.status(404).send('Página no encontrada');
@@ -918,7 +960,6 @@ app.get('/logs', (req, res) => {
         res.status(500).send('Error al leer el archivo de logs');
     }
 });
-
 
 
 // Ruta para manejar solicitudes POST en /spnts

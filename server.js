@@ -13,6 +13,7 @@ const app = express();
 const upload = multer({ dest: 'uploads/' });
 const moment = require('moment');
 const sql = require('mssql');
+const { exec } = require('child_process');
 const logFilePath = './logs/actions.log';  // Ruta del archivo de log
 require('dotenv').config();
 //const url = 'https://test.registradores.org/xmlpeticion';
@@ -54,6 +55,62 @@ const config = {
         enableArithAbort: true
     }
 };
+
+// Función para realizar la consulta y llamar a Python
+async function modificarDBFConPython(idPeticion, idVersion) {
+    try {
+        // Crear una nueva solicitud SQL para la consulta `get_For_DBF`
+        const queryDBF = `
+            SELECT * FROM notassimples.get_For_DBF(@idPeticion, @idVersion)
+        `;
+        const dbfRequest = new sql.Request();
+        dbfRequest.input('idPeticion', sql.Int, idPeticion);
+        dbfRequest.input('idVersion', sql.SmallInt, idVersion);
+
+        // Ejecutar la consulta y obtener los datos
+        const dbfDataResult = await dbfRequest.query(queryDBF);
+        const dbfData = dbfDataResult.recordset[0];
+
+        if (!dbfData) {
+            console.error('No se encontraron datos para el archivo DBF.');
+            return;
+        }
+
+        // Extraer valores necesarios para la llamada al script Python
+        const { IM_ANO_CLA, IM_NUM_TAS, IM_SUP_TAS, IMAGEN} = dbfData;
+
+        const queryidDocumento = `
+            SELECT notassimples.peticiones_get_idDocumento(@idPeticion, @idVersion) AS idDocumento
+        `;
+
+        const queryidDocumentorequest = new sql.Request();
+        queryidDocumentorequest.input('idPeticion', sql.Int, idPeticion);
+        queryidDocumentorequest.input('idVersion', sql.SmallInt, idVersion);
+
+        // Ejecutar la consulta y obtener el resultado
+        const queryidDocumentoResult = await request.query(queryidDocumento);
+        const idDocumento = queryidDocumentoResult.recordset[0].idDocumento;
+        const NombreArchivo = `${idDocumento}.dbf`;
+
+        console.log(IM_ANO_CLA, IM_NUM_TAS, IM_SUP_TAS, IMAGEN, idDocumento);
+
+        // Llamar al script Python y pasar los argumentos
+        exec(`python3 modificar_dbf.py ${IM_ANO_CLA} ${IM_NUM_TAS} ${IM_SUP_TAS} ${IMAGEN} ${NombreArchivo}`, 
+            (error, stdout, stderr) => {
+            if (error) {
+                console.error(`Error al ejecutar el script de Python: ${error.message}`);
+                return;
+            }
+            if (stderr) {
+                console.error(`stderr de Python: ${stderr}`);
+                return;
+            }
+            console.log(`Salida del script Python: ${stdout}`);
+        });
+    } catch (err) {
+        console.error('Error al modificar el archivo DBF:', err);
+    }
+}
 
 // Middleware de autenticación básica
 function basicAuth(req, res, next) {
@@ -136,12 +193,12 @@ async function fetchPendingRequests() {
     try {
         await sql.connect(config);
         // idEstado = 1 Pendiente de petición
-        const peticiones = await sql.query`SELECT idPeticion, idVersion, idCorpme FROM peticiones WHERE idEstado = 1`;
+        const peticiones = await sql.query`SELECT idPeticion, idVersion, idUsuario FROM peticiones WHERE idEstado = 1`;
        // Recorrer cada petición encontrada
         for (let i = 0; i < peticiones.recordset.length; i++) {
             const idPeticion = peticiones.recordset[i].idPeticion;
             const idVersion =  peticiones.recordset[i].idVersion;
-            const idCorpme =  peticiones.recordset[i].idCorpme;
+            const idUsuario =  peticiones.recordset[i].idUsuario;
 
             const datosSolicitud = await sql.query`SELECT * FROM datosSolicitud WHERE idPeticion = ${idPeticion} AND idVersion = ${idVersion}`;
 
@@ -155,7 +212,8 @@ async function fetchPendingRequests() {
                     finca: datosSolicitud.recordset[0].finca,
                     observaciones: datosSolicitud.recordset[0].observaciones,
                     idPeticion: idPeticion,
-                    idVersion: idVersion
+                    idVersion: idVersion,
+                    idUsuario: idUsuario
                 });
             }
             // Si idTipoSolicitud es 2, almacenamos el nifTitular y el idPeticion en el array
@@ -164,7 +222,8 @@ async function fetchPendingRequests() {
                     nifTitular: datosSolicitud.recordset[0].nifTitular,
                     observaciones: datosSolicitud.recordset[0].observaciones,
                     idPeticion: idPeticion,
-                    idVersion: idVersion
+                    idVersion: idVersion,
+                    idUsuario: idUsuario
                 });
             }
             // Si idTipoSolicitud es 3, almacenamos el IDUFIR y el idPeticion en el array
@@ -173,7 +232,8 @@ async function fetchPendingRequests() {
                     IDUFIR: datosSolicitud.recordset[0].IDUFIR,
                     observaciones: datosSolicitud.recordset[0].observaciones,
                     idPeticion: idPeticion,
-                    idVersion: idVersion
+                    idVersion: idVersion,
+                    idUsuario: idUsuario
                 });
             }
         }
@@ -187,7 +247,7 @@ async function fetchPendingRequests() {
             resultadosReenvio.push({
                 idCorpme: idCorpme,  // Asumiendo que idCorpme está en la tabla peticiones
                 idPeticion: idPeticion,
-                idVersion: idVersion
+                idVersion: idVersion,
             });
            
         }
@@ -234,7 +294,7 @@ async function fetchPendingRequests() {
 async function sendXMLxTitular(resultados) {
     for (let data of resultados) {
 
-        const { nifTitular, observaciones, idPeticion, idVersion } = data;
+        const { nifTitular, observaciones, idPeticion, idVersion, idUsuario } = data;
         const xml = fs.readFileSync('./xml/peticion_x_titular.xml', 'utf-8');
 
         try {
@@ -249,9 +309,8 @@ async function sendXMLxTitular(resultados) {
 
             // Obtener email del usuario de la base de datos con la función  usar valor predeterminado
             await sql.connect(config);
-            const usuario = parsedXml['corpme-floti'].peticiones[0].credenciales[0].usuario[0];
             const result = await sql.query`
-                SELECT notassimples.get_email_usuario(${usuario}) AS email
+                SELECT notassimples.get_email_usuario(${idUsuario}) AS email
             `;
 
             // Asignar el correo electrónico, o valor predeterminado si es nulo
@@ -307,7 +366,7 @@ async function sendXMLxTitular(resultados) {
 async function sendXMLxIDUFIR(resultados) {
     for (let data of resultados) {
 
-        const { IDUFIR, observaciones, idPeticion, idVersion } = data;
+        const { IDUFIR, observaciones, idPeticion, idVersion, idUsuario } = data;
         const xml = fs.readFileSync('./xml/peticion_x_idufir.xml', 'utf-8');
 
         try {
@@ -322,9 +381,8 @@ async function sendXMLxIDUFIR(resultados) {
 
             // Obtener email del usuario de la base de datos con la función  usar valor predeterminado
             await sql.connect(config);
-            const usuario = parsedXml['corpme-floti'].peticiones[0].credenciales[0].usuario[0];
             const result = await sql.query`
-                SELECT notassimples.get_email_usuario(${usuario}) AS email
+                SELECT notassimples.get_email_usuario(${idUsuario}) AS email
             `;
 
             // Asignar el correo electrónico, o valor predeterminado si es nulo
@@ -377,7 +435,7 @@ async function sendXMLxIDUFIR(resultados) {
 async function sendXMLxFinca(resultados) {
     for (let data of resultados) {
         // console.log(data);
-        const { codigoRegistro, municipio, provincia, seccion, finca, observaciones, idPeticion, idVersion } = data;
+        const { codigoRegistro, municipio, provincia, seccion, finca, observaciones, idPeticion, idVersion, idUsuario } = data;
         const xml = fs.readFileSync('./xml/peticion_x_finca.xml', 'utf-8');
 
         try {
@@ -392,9 +450,8 @@ async function sendXMLxFinca(resultados) {
 
             // Obtener email del usuario de la base de datos con la función  usar valor predeterminado
             await sql.connect(config);
-            const usuario = parsedXml['corpme-floti'].peticiones[0].credenciales[0].usuario[0];
             const result = await sql.query`
-                SELECT notassimples.get_email_usuario(${usuario}) AS email
+                SELECT notassimples.get_email_usuario(${idUsuario}) AS email
             `;
 
             // Asignar el correo electrónico, o valor predeterminado si es nulo
@@ -594,7 +651,7 @@ async function handleReceipt(receipt, idPeticion, idVersion) {
         request.input('idVersion', sql.SmallInt, idVersion);
         request.input('idUsuario', sql.VarChar(20), idUsuario);
         request.input('idEstado', sql.TinyInt, idEstado);
-        request.input('comentario', sql.VarChar(200), comentario);
+        request.input('comentario', sql.NVarChar(sql.MAX), comentario);
 
         await request.query(query);
 
@@ -742,7 +799,7 @@ async function processReenvíoCorpmeFloti(xmlData, idPeticion, idVersion) {
                     requestHistoria.input('idVersion', sql.SmallInt, idVersion);
                     requestHistoria.input('idUsuario', sql.VarChar(20), idUsuario);
                     requestHistoria.input('idEstado', sql.TinyInt, idEstado);
-                    requestHistoria.input('comentario', sql.VarChar(200), comentario);
+                    requestHistoria.input('comentario', sql.NVarChar(sql.MAX), comentario);
         
                     await requestHistoria.query(queryHistoria);
 
@@ -800,7 +857,7 @@ async function processReenvíoCorpmeFloti(xmlData, idPeticion, idVersion) {
                             request.input('idVersion', sql.SmallInt, idVersion);
                             request.input('idUsuario', sql.VarChar(20), idUsuario);
                             request.input('idEstado', sql.TinyInt, idEstado);
-                            request.input('comentario', sql.VarChar(200), comentario);
+                            request.input('comentario', sql.NVarChar(sql.MAX), comentario);
                 
                             await request.query(query);
                             logAction(`Recibida respuesta negativa para solicitud de reenvío: ${identificador}, idPeticion: ${idPeticion} e idVersion: ${idVersion}. ${comentario}`);
@@ -856,7 +913,7 @@ async function processReenvíoCorpmeFloti(xmlData, idPeticion, idVersion) {
                         requestHistory.input('idVersion', sql.SmallInt, idVersion);
                         requestHistory.input('idUsuario', sql.VarChar(20), idUsuario);
                         requestHistory.input('idEstado', sql.TinyInt, idEstado);
-                        requestHistory.input('comentario', sql.VarChar(200), comentario);
+                        requestHistory.input('comentario', sql.NVarChar(sql.MAX), comentario);
             
                         await request.query(queryHistory);
                         logAction(`Petición Reenvío denegada por Registradores para solicitud de reenvío: idRespuesta: ${codigoTipoRespuesta} | ${textoIntermedio} | ${textoTipoRespuesta} | idCorpme: ${identificador} | idPeticion: ${idPeticion} | idVersion:${idPeticion}.`);
@@ -1099,7 +1156,7 @@ async function processCorpmeFloti(xmlData, res) {
                         request.input('idVersion', sql.SmallInt, idVersion);
                         request.input('idUsuario', sql.VarChar(20), idUsuario);
                         request.input('idEstado', sql.TinyInt, idEstado);
-                        request.input('comentario', sql.VarChar(200), comentario);
+                        request.input('comentario', sql.NVarChar(sql.MAX), comentario);
             
                         await request.query(query);
 
@@ -1166,7 +1223,7 @@ async function processCorpmeFloti(xmlData, res) {
                         request.input('idVersion', sql.SmallInt, idVersion);
                         request.input('idUsuario', sql.VarChar(20), idUsuario);
                         request.input('idEstado', sql.TinyInt, idEstado);
-                        request.input('comentario', sql.VarChar(200), comentario);
+                        request.input('comentario', sql.NVarChar(sql.MAX), comentario);
             
                         await request.query(query);
 
@@ -1233,7 +1290,7 @@ async function processCorpmeFloti(xmlData, res) {
                             request.input('idVersion', sql.SmallInt, idVersion);
                             request.input('idUsuario', sql.VarChar(20), idUsuario);
                             request.input('idEstado', sql.TinyInt, idEstado);
-                            request.input('comentario', sql.VarChar(200), comentario);
+                            request.input('comentario', sql.NVarChar(sql.MAX), comentario);
                 
                             await request.query(query);
                             logAction(`Recibida respuesta negativa asíncrona para solicitud de nota simple: idRespuesta: ${codigoTipoRespuesta} | ${textoIntermedio} | ${textoTipoRespuesta} | idCorpme: ${identificador} | idPeticion: ${idPeticion} | idVersion:${idPeticion}.`);
@@ -1310,7 +1367,7 @@ async function processCorpmeFloti(xmlData, res) {
                             request.input('idVersion', sql.SmallInt, idVersion);
                             request.input('idUsuario', sql.VarChar(20), idUsuario);
                             request.input('idEstado', sql.TinyInt, idEstado);
-                            request.input('comentario', sql.VarChar(200), comentario);
+                            request.input('comentario', sql.NVarChar(sql.MAX), comentario);
                 
                             await request.query(query);
                             logAction(`Petición denegada por Registradores: idRespuesta: ${codigoTipoRespuesta} | ${textoIntermedio} | ${textoTipoRespuesta} | idCorpme: ${identificador} | idPeticion: ${idPeticion} | idVersion:${idPeticion}.`);
@@ -1345,7 +1402,7 @@ async function processCorpmeFlotiFacturacion(xmlData, res) {
     // Se convierte el objeto JavaScript de vuelta a formato XML
     const xmlString = builder.buildObject(xmlData);
 
-    fs.writeFile(`./xml/respuestaFacturacion${Date.now()}.xml`, xmlString, (err) => {
+    fs.writeFile(`./xml_recibidos/respuestaFacturacion${Date.now()}.xml`, xmlString, (err) => {
         if (err) {
             console.error('Error al guardar el archivo XML:', err);
             res.status(500).send('Error al guardar el archivo XML');

@@ -681,24 +681,7 @@ async function processReenvíoCorpmeFloti(xmlData, idPeticion, idVersion) {
     
         // Extraer referencia que contiene RF_idPeticion_idVersion
         const referencia = respuesta.referencia ? respuesta.referencia[0] : null;
-  /*      let idPeticion, idVersion;
-
-        if (referencia) {
-            const partesReferencia = referencia.split('_');
-            if (partesReferencia.length === 3) {
-                idPeticion = partesReferencia[1];  // Segundo elemento es idPeticion
-                idVersion = partesReferencia[2];   // Tercer elemento es idVersion
-            } else {
-                console.error('Referencia no tiene el formato esperado RF_idPeticion_idVersion');
-                logAction('Referencia no tiene el formato esperado RF_idPeticion_idVersion');
-                return;
-            }
-        } else {
-            console.error('Referencia no encontrada en la respuesta');
-            logAction('Referencia no encontrada en la respuesta');
-            return;
-        }
-*/
+ 
 
         // Hacemos una copia del XML para modificarla antes de guardarla en la base de datos
         let xmlDataSinPdfNiFirma = JSON.parse(JSON.stringify(xmlData)); // Copia profunda del objeto original

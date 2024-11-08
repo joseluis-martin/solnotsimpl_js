@@ -77,25 +77,25 @@ async function modificarDBFConPython(idPeticion, idVersion) {
         }
 
         // Extraer valores necesarios para la llamada al script Python
-        const { IM_ANO_CLA, IM_NUM_TAS, IM_SUP_TAS, IMAGEN} = dbfData;
+        const { IM_ANO_CLA, IM_NUM_TAS, IM_SUP_TAS, IMAGEN, NombreArchivo} = dbfData;
 
         const queryidDocumento = `
             SELECT notassimples.peticiones_get_idDocumento(@idPeticion, @idVersion) AS idDocumento
         `;
 
-        const queryidDocumentorequest = new sql.Request();
-        queryidDocumentorequest.input('idPeticion', sql.Int, idPeticion);
-        queryidDocumentorequest.input('idVersion', sql.SmallInt, idVersion);
-
-        // Ejecutar la consulta y obtener el resultado
-        const queryidDocumentoResult = await request.query(queryidDocumento);
+        const idDocumentoRequest = new sql.Request();
+        idDocumentoRequest.input('idPeticion', sql.Int, idPeticion);
+        idDocumentoRequest.input('idVersion', sql.SmallInt, idVersion);
+        
+        // Ejecutar la consulta correctamente con el nombre del objeto adecuado
+        const queryidDocumentoResult = await idDocumentoRequest.query(queryidDocumento);
         const idDocumento = queryidDocumentoResult.recordset[0].idDocumento;
-        const NombreArchivo = `${idDocumento}.dbf`;
+        const NombreArchivoDoc = `${idDocumento}.dbf`
 
         console.log(IM_ANO_CLA, IM_NUM_TAS, IM_SUP_TAS, IMAGEN, idDocumento);
 
         // Llamar al script Python y pasar los argumentos
-        exec(`python3 modificar_dbf.py ${IM_ANO_CLA} ${IM_NUM_TAS} ${IM_SUP_TAS} ${IMAGEN} ${NombreArchivo}`, 
+        exec(`python modificar_dbf.py ${IM_ANO_CLA} ${IM_NUM_TAS} ${IM_SUP_TAS} ${IMAGEN} ${NombreArchivoDoc}`, 
             (error, stdout, stderr) => {
             if (error) {
                 console.error(`Error al ejecutar el script de Python: ${error.message}`);
@@ -107,6 +107,54 @@ async function modificarDBFConPython(idPeticion, idVersion) {
             }
             console.log(`Salida del script Python: ${stdout}`);
         });
+
+        // Llamada al procedimiento almacenado notassimples.peticiones_peticion_dbf_insert en un bloque try-catch separado
+        try {
+            const insertRequest = new sql.Request();
+            insertRequest.input('idDocumento', sql.Int, idDocumento);
+            insertRequest.input('NombreArchivo', sql.VarChar(255), NombreArchivo);
+
+            await insertRequest.query(`
+                EXEC notassimples.peticiones_peticion_dbf_insert 
+                    @idDocumento, 
+                    @NombreArchivo
+            `);
+
+            console.log(`Registro insertado con éxito en peticiones_peticion_dbf_insert para idDocumento: ${idDocumento} y NombreArchivo: ${NombreArchivo}`);
+            logAction(`Ejecutado peticiones_peticion_dbf_insert para idDocumento: ${idDocumento}, NombreArchivo: ${NombreArchivo}`);
+        } catch (error) {
+            console.error(`Error al ejecutar peticiones_peticion_dbf_insert: ${error.message}`);
+            logAction(`Error al ejecutar peticiones_peticion_dbf_insert para idDocumento: ${idDocumento} y NombreArchivo: ${NombreArchivo}`);
+        }
+
+        // Llamada al procedimiento notassimples.peticiones_historia_new 
+        try {
+            const comentario = `Generación del archivo DBF: ${NombreArchivo}`;
+            const historiaRequest = new sql.Request();
+        
+
+            historiaRequest.input('idPeticion', sql.Int, idPeticion);
+            historiaRequest.input('idVersion', sql.SmallInt, idVersion);
+            historiaRequest.input('idUsuario', sql.VarChar(20), 'SRVREG'); // Ajusta este valor si es necesario
+            historiaRequest.input('idEstado', sql.TinyInt, 5); 
+            historiaRequest.input('comentario', sql.NVarChar(sql.MAX), comentario);
+
+            await historiaRequest.query(`
+                EXEC notassimples.peticiones_historia_new 
+                    @idPeticion, 
+                    @idVersion, 
+                    @idUsuario, 
+                    @idEstado, 
+                    @comentario
+            `);
+
+            console.log(`Registro de historial insertado con éxito para idPeticion: ${idPeticion}, idVersion: ${idVersion} con el comentario: "${comentario}"`);
+            logAction(`Ejecutado peticiones_historia_new para idPeticion: ${idPeticion}, idVersion: ${idVersion} con comentario: "${comentario}"`);
+        } catch (error) {
+            console.error(`Error al ejecutar peticiones_historia_new: ${error.message}`);
+            logAction(`Error al ejecutar peticiones_historia_new para idPeticion: ${idPeticion}, idVersion: ${idVersion} con comentario: "${comentario}"`);
+        }
+
     } catch (err) {
         console.error('Error al modificar el archivo DBF:', err);
     }
@@ -1145,6 +1193,16 @@ async function processCorpmeFloti(xmlData, res) {
 
                         logAction(`PDF de nota simple guardado en la base de datos exitosamente para idCorpme: ${identificador}, idPeticion: ${idPeticion} e idVersion: ${idVersion}`);
 
+                        // Llamada a modificarDBFConPython y manejo de posibles errores
+                        try {
+                            await modificarDBFConPython(idPeticion, idVersion);
+                            console.log(`Generación de los archivos .dbf, .FPT y .memo ejecutada exitosamente para idPeticion: ${idPeticion} y idVersion: ${idVersion}`);
+                            logAction(`Generación de los archivos .dbf, .FPT y .memo ejecutada exitosamente para idPeticion: ${idPeticion} y idVersion: ${idVersion}`);
+                        } catch (error) {
+                            console.error(`Error al ejecutar modificarDBFConPython: ${error.message}`);
+                            logAction(`Error al ejecutar modificarDBFConPython para idPeticion: ${idPeticion} y idVersion: ${idVersion}`);
+                        }
+
                     } else {
                         console.error('No se encontraron idPeticion o idVersion asociados con el identificador corpme');
                         logAction(`No se encontraron idPeticion o idVersion asociados con el identificador corpme`);
@@ -1353,7 +1411,7 @@ async function processCorpmeFloti(xmlData, res) {
                             request.input('comentario', sql.NVarChar(sql.MAX), comentario);
                 
                             await request.query(query);
-                            logAction(`Petición denegada por Registradores: idRespuesta: ${codigoTipoRespuesta} | ${textoIntermedio} | ${textoTipoRespuesta} | idCorpme: ${identificador} | idPeticion: ${idPeticion} | idVersion:${idPeticion}.`);
+                            logAction(`Petición denegada por Registradores: idRespuesta: ${codigoTipoRespuesta} | ${textoIntermedio} | ${textoTipoRespuesta} | idCorpme: ${identificador} | idPeticion: ${idPeticion} | idVersion:${idVersion}.`);
                     } else {
                         console.error(`No se encontraron idPeticion ${idPeticion} o idVersion ${idPeticion} asociados con el identificador corpme: ${identificador}`);
                         logAction(`No se encontraron idPeticion ${idPeticion} o idVersion ${idPeticion} asociados con el identificador corpme: ${identificador}`);

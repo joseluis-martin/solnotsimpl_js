@@ -1049,6 +1049,54 @@ app.get('/logs', (req, res) => {
     }
 });
 
+// Ruta para DBFs no generados
+app.get('/procesar-peticiones-dbfs', async (req, res) => {
+    try {
+        await sql.connect(config);
+        
+        // Consulta SQL para obtener solo las primeras 10 peticiones pendientes
+        const query = `
+            SELECT TOP 5 T1.idDocumento, T1.idPeticion, T1.idVersion
+            FROM tasadores.notassimples.peticiones T1
+            WHERE T1.idRespuesta='1' AND T1.idEstado='5'
+            AND NOT EXISTS (
+                SELECT NULL 
+                FROM tasadores.notassimples.peticiones_dbf T2 
+                WHERE T1.idDocumento = T2.idDocumento
+            )
+            ORDER BY T1.idDocumento
+        `;
+        
+        const result = await sql.query(query);
+        const peticiones = result.recordset;
+
+        if (peticiones.length === 0) {
+            res.status(200).send('No hay peticiones pendientes para procesar.');
+            return;
+        }
+
+        // Iterar sobre los primeros 10 registros y ejecutar modificarDBFConPython
+        for (const peticion of peticiones) {
+            const { idPeticion, idVersion } = peticion;
+            try {
+                await modificarDBFConPython(idPeticion, idVersion);
+                console.log(`modificarDBFConPython ejecutado con éxito para idPeticion: ${idPeticion}, idVersion: ${idVersion}`);
+                logAction(`modificarDBFConPython ejecutado con éxito para idPeticion: ${idPeticion}, idVersion: ${idVersion}`);
+            } catch (error) {
+                console.error(`Error al procesar modificarDBFConPython para idPeticion: ${idPeticion}, idVersion: ${idVersion}:`, error);
+                logAction(`Error al procesar modificarDBFConPython para idPeticion: ${idPeticion}, idVersion: ${idVersion}: ${error.message}`);
+            }
+        }
+
+        res.status(200).send('Peticiones procesadas correctamente.');
+    } catch (error) {
+        console.error('Error al ejecutar la consulta o al conectar a la base de datos:', error);
+        logAction(`Error al ejecutar la consulta o al conectar a la base de datos: ${error.message}`);
+        res.status(500).send('Error al procesar las peticiones.');
+    } finally {
+        await sql.close();
+    }
+});
 
 // Ruta para manejar solicitudes POST en /spnts
 app.post('/spnts', async (req, res) => {
@@ -1196,8 +1244,8 @@ async function processCorpmeFloti(xmlData, res) {
                         // Llamada a modificarDBFConPython y manejo de posibles errores
                         try {
                             await modificarDBFConPython(idPeticion, idVersion);
-                            console.log(`Generación de los archivos .dbf, .FPT y .memo ejecutada exitosamente para idPeticion: ${idPeticion} y idVersion: ${idVersion}`);
-                            logAction(`Generación de los archivos .dbf, .FPT y .memo ejecutada exitosamente para idPeticion: ${idPeticion} y idVersion: ${idVersion}`);
+                            console.log(`Generación de los archivos .dbf, .FPT y .mem ejecutada exitosamente para idPeticion: ${idPeticion} y idVersion: ${idVersion}`);
+                            logAction(`Generación de los archivos .dbf, .FPT y .mem ejecutada exitosamente para idPeticion: ${idPeticion} y idVersion: ${idVersion}`);
                         } catch (error) {
                             console.error(`Error al ejecutar modificarDBFConPython: ${error.message}`);
                             logAction(`Error al ejecutar modificarDBFConPython para idPeticion: ${idPeticion} y idVersion: ${idVersion}`);

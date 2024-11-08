@@ -89,10 +89,12 @@
             </div>
         </div>
 
-<!--    <div class="text-center">
-            <button id="stopServer" class="btn btn-danger mr-3">Detener Servidor</button>
-            <button id="restartServer" class="btn btn-warning">Reiniciar Servidor</button>
-        </div>-->
+        <div class="logs-container mb-5">
+            <h3>Generar DBFs pendientes</h3>
+            <button id="processDBFs" class="btn btn-primary mb-3">Generar DBFs</button>
+            <pre id="dbfResults" class="bg-light p-3 border rounded">Esperando para procesar...</pre>
+        </div>
+
     </div>
 
     <!-- Bootstrap JS and dependencies -->
@@ -173,6 +175,21 @@
         // Actualiza el estado y los logs periódicamente
         getStatus();
         getLogs(currentPage, currentDate);
+
+        // Generación de los dbfs pendientes
+        document.getElementById('processDBFs').addEventListener('click', async () => {
+            const dbfResultsElement = document.getElementById('dbfResults');
+            dbfResultsElement.textContent = "Procesando peticiones DBF...";
+
+            try {
+                const response = await fetch('/procesar-peticiones-dbfs');
+                const result = await response.text();
+                dbfResultsElement.textContent = result;  // Muestra el resultado en la ventana
+            } catch (error) {
+                console.error('Error al procesar las peticiones DBF:', error);
+                dbfResultsElement.textContent = 'Error al procesar las peticiones DBF.';
+            }
+        });
     </script>
 </body>
 </html>

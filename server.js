@@ -1525,36 +1525,40 @@ async function processCorpmeFlotiFacturacion(xmlData, res) {
             const result = await requestFactura.query(facturaQuery);
             const facturaId = result.recordset[0].factura_id;
 
-            // Insertar datos de cada factura en la tabla facturación_peticion
             for (let factura of facturacionData.factura) {
-                const peticion = factura.peticion ? factura.peticion[0] : null;
-                if (peticion) {
-                    // Extraer datos de la petición
-                    const grupo = peticion.$['grupo'];
-                    const id = peticion.$['id'];
-                    const usuario = peticion.$['usuario'];
-                    const fecha = peticion.$['fecha'];
-                    const fechaRespuesta = peticion.$['fecha-respuesta'];
-                    const tipo = peticion.$['tipo'];
-                    const importeBasePeticion = peticion.$['importe-base'];
-                    const porcentajeImpuesto = peticion.$['porcentaje-impuesto'];
-
-                    // Insertar datos en la tabla facturación_peticion
-                    const peticionQuery = `INSERT INTO facturacion_peticion (factura_id, peticion_grupo, peticion_id, peticion_usuario, peticion_fecha, "peticion_fecha-respuesta", peticion_tipo, "peticion_importe-base", "peticion_porcentaje-impuesto") 
-                                           VALUES (@factura_id, @grupo, @id, @usuario, @fecha, @fecha_respuesta, @tipo, @importe_base, @porcentaje_impuesto);`;
-                    const requestPeticion = new sql.Request();
-                    requestPeticion.input('factura_id', sql.Int, facturaId);
-                    requestPeticion.input('grupo', sql.VarChar(50), grupo);
-                    requestPeticion.input('id', sql.VarChar(50), id);
-                    requestPeticion.input('usuario', sql.VarChar(50), usuario);
-                    requestPeticion.input('fecha', sql.SmallDateTime, new Date(fecha));
-                    requestPeticion.input('fecha_respuesta', sql.SmallDateTime, new Date(fechaRespuesta));
-                    requestPeticion.input('tipo', sql.Int(4), tipo);
-                    requestPeticion.input('importe_base', sql.Money, parseFloat(importeBasePeticion));
-                    requestPeticion.input('porcentaje_impuesto', sql.Decimal(5, 2), parseFloat(porcentajeImpuesto));
-
-                    await requestPeticion.query(peticionQuery);
-                    logAction(`Información de facturación almacenada factura_id: ${facturaId}`);
+                // Asegurarse de que 'peticion' sea un array.
+                const peticiones = Array.isArray(factura.peticion) ? factura.peticion : [factura.peticion];
+            
+                // Iterar sobre todas las peticiones en cada factura
+                for (let peticion of peticiones) {
+                    if (peticion) {
+                        // Extraer datos de la petición
+                        const grupo = peticion.$['grupo'];
+                        const id = peticion.$['id'];
+                        const usuario = peticion.$['usuario'];
+                        const fecha = peticion.$['fecha'];
+                        const fechaRespuesta = peticion.$['fecha-respuesta'];
+                        const tipo = peticion.$['tipo'];
+                        const importeBasePeticion = peticion.$['importe-base'];
+                        const porcentajeImpuesto = peticion.$['porcentaje-impuesto'];
+            
+                        // Insertar datos en la tabla facturación_peticion
+                        const peticionQuery = `INSERT INTO facturacion_peticion (factura_id, peticion_grupo, peticion_id, peticion_usuario, peticion_fecha, "peticion_fecha-respuesta", peticion_tipo, "peticion_importe-base", "peticion_porcentaje-impuesto") 
+                                                VALUES (@factura_id, @grupo, @id, @usuario, @fecha, @fecha_respuesta, @tipo, @importe_base, @porcentaje_impuesto);`;
+                        const requestPeticion = new sql.Request();
+                        requestPeticion.input('factura_id', sql.Int, facturaId);
+                        requestPeticion.input('grupo', sql.VarChar(50), grupo);
+                        requestPeticion.input('id', sql.VarChar(50), id);
+                        requestPeticion.input('usuario', sql.VarChar(50), usuario);
+                        requestPeticion.input('fecha', sql.SmallDateTime, new Date(fecha));
+                        requestPeticion.input('fecha_respuesta', sql.SmallDateTime, new Date(fechaRespuesta));
+                        requestPeticion.input('tipo', sql.Int(4), tipo);
+                        requestPeticion.input('importe_base', sql.Money, parseFloat(importeBasePeticion));
+                        requestPeticion.input('porcentaje_impuesto', sql.Decimal(5, 2), parseFloat(porcentajeImpuesto));
+            
+                        await requestPeticion.query(peticionQuery);
+                        logAction(`Información de facturación almacenada factura_id: ${facturaId}`);
+                    }
                 }
             }
 

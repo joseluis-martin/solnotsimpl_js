@@ -52,6 +52,7 @@ La aplicación está desarrollada en **Node.js** y utiliza un frontend en HTML y
   - El puerto `1433` debe estar habilitado en el firewall para conexiones a SQL Server.
   - El puerto `5999` (o el configurado en `.env`) para acceso a la aplicación desde el navegador.
 
+---
 
 ## 3. Preparación del Entorno de Servidor
 
@@ -113,6 +114,8 @@ Accede al directorio donde se encuentra `server.js` y ejecuta:
    npm install
    ```
 
+---
+
 ## 5. Configuración del Entorno de Ejecución
 
 ### 5.1. Configuración del Archivo .env
@@ -153,6 +156,8 @@ Para automatizar la ejecución de la aplicación en el arranque del sistema:
    ```
    C:\Program Files\nodejs\node.exe C:\Users\desarrollo\solnotsimpl_js\server.js
    ```
+
+---
 
 ## 7. Iniciar y Detener la Aplicación
 

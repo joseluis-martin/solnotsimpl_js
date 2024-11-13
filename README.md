@@ -30,7 +30,7 @@ La aplicación está desarrollada en **Node.js** y utiliza un frontend en HTML y
 
 ---
 
-## 2. Requisitos del Sistema
+## Requisitos del Sistema
 
 ### 2.1. Software
 

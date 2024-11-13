@@ -5,16 +5,16 @@
 
 ## Índice
 
-1. [Descripción General de la Aplicación](#descripción-general-de-la-aplicación)
+1. [Descripción General de la Aplicación](#1-descripción-general-de-la-aplicación)
 2. [Requisitos del Sistema](#2-requisitos-del-sistema)
-3. [Preparación del Entorno de Servidor](#preparación-del-entorno-de-servidor)
-4. [Instalación de Dependencias](#instalación-de-dependencias)
-5. [Configuración del Entorno de Ejecución](#configuración-del-entorno-de-ejecución)
-6. [Despliegue en Producción](#despliegue-en-producción)
-7. [Iniciar y Detener la Aplicación](#iniciar-y-detener-la-aplicación)
-8. [Monitoreo y Visualización de Logs](#monitoreo-y-visualización-de-logs)
-9. [Mantenimiento y Actualización](#mantenimiento-y-actualización)
-10. [Resolución de Problemas Comunes](#resolución-de-problemas-comunes)
+3. [Preparación del Entorno de Servidor](#3-preparación-del-entorno-de-servidor)
+4. [Instalación de Dependencias](#4-instalación-de-dependencias)
+5. [Configuración del Entorno de Ejecución](#5-configuración-del-entorno-de-ejecución)
+6. [Despliegue en Producción](#6-despliegue-en-producción)
+7. [Iniciar y Detener la Aplicación](#7-iniciar-y-detener-la-aplicación)
+8. [Monitoreo y Visualización de Logs](#8-monitoreo-y-visualización-de-logs)
+9. [Mantenimiento y Actualización](#9-mantenimiento-y-actualización)
+10. [Resolución de Problemas Comunes](#10-resolución-de-problemas-comunes)
 
 ---
 

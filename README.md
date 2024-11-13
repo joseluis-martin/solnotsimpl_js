@@ -6,7 +6,7 @@
 ## Índice
 
 1. [Descripción General de la Aplicación](#descripción-general-de-la-aplicación)
-2. [Requisitos del Sistema](#requisitos-del-sistema)
+2. [Requisitos del Sistema](#2-requisitos-del-sistema)
 3. [Preparación del Entorno de Servidor](#preparación-del-entorno-de-servidor)
 4. [Instalación de Dependencias](#instalación-de-dependencias)
 5. [Configuración del Entorno de Ejecución](#configuración-del-entorno-de-ejecución)
@@ -30,7 +30,7 @@ La aplicación está desarrollada en **Node.js** y utiliza un frontend en HTML y
 
 ---
 
-## Requisitos del Sistema
+## 2. Requisitos del Sistema
 
 ### 2.1. Software
 

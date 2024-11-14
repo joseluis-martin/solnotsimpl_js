@@ -1049,6 +1049,52 @@ app.get('/logs', (req, res) => {
     }
 });
 
+// Ruta para obtener las estadisticas de peticiones
+app.get('/stats', async (req, res) => {
+    try {
+        await sql.connect(config);
+
+        const query = `
+            SELECT idEstado, COUNT(*) AS count
+            FROM peticiones
+            WHERE idEstado IN (2, 4, 5, 8)
+            GROUP BY idEstado
+        `;
+        
+        const result = await sql.query(query);
+        const stats = {
+            enEspera: 0,
+            respondidas: 0,
+            denegadas: 0,
+            anuladas: 0,
+        };
+
+        // Mapear los resultados a los valores específicos
+        result.recordset.forEach(row => {
+            switch (row.idEstado) {
+                case 2:
+                    stats.enEspera = row.count;
+                    break;
+                case 5:
+                    stats.respondidas = row.count;
+                    break;
+                case 4:
+                    stats.denegadas = row.count;
+                    break;
+                case 8:
+                    stats.anuladas = row.count;
+                    break;
+            }
+        });
+
+        res.json(stats);
+    } catch (error) {
+        console.error('Error al obtener estadísticas de peticiones:', error);
+        res.status(500).send('Error al obtener estadísticas de peticiones');
+    } finally {
+        await sql.close();
+    }
+});
 // Ruta para DBFs no generados
 app.get('/procesar-peticiones-dbfs', async (req, res) => {
     try {
@@ -1335,12 +1381,71 @@ async function processCorpmeFloti(xmlData, res) {
                     return;
                 }
             }
+        } else if (codigoTipoRespuesta === '0') {
+            // Soklicitud reenviada a otro registro. Se mantiene la solicitue en espera IdEstado = 2
+            try {
+                // Obtener idPeticion y idVersion
+                const idPeticion = await getIdPeticionByIdCorpme(identificador);
+                const idVersion = await getIdVersionByIdCorpme(identificador);
+                await sql.connect(config);
+                // Guardar tipo-respuesta en la tabla peticiones
+                const query = `UPDATE peticiones SET IdEstado = 2, idRespuesta = @codigoTipoRespuesta WHERE idCorpme = @idCorpme AND idPeticion = @idPeticion AND idVersion = @idVersion`;
+                const request = new sql.Request();
+                request.input('codigoTipoRespuesta', sql.Int, codigoTipoRespuesta); 
+                request.input('idCorpme', sql.VarChar(50), identificador);
+                request.input('idPeticion', sql.Int, idPeticion);
+                request.input('idVersion', sql.SmallInt, idVersion);
+                await request.query(query);
+
+                if (idPeticion && idVersion) {
+                    // Llamar al procedimiento con el comentario basado en informacion.texto
+                    let textoIntermedio;
+                    textoIntermedio = 'Desconocido';
+                
+                    const textoTipoRespuesta = informacion && informacion.texto ? informacion.texto[0] : 'Sin información adicional';
+                    const comentario = `Aviso de redirección: La petición ha sido redirigida a otro Registro. idRespuesta: ${codigoTipoRespuesta} | ${textoIntermedio} | ${textoTipoRespuesta}`;
+                    const idUsuario = "CORPME";
+                    const idEstado = 2;
+
+                        const query = `
+                        EXEC notassimples.peticiones_historia_new
+                            @idPeticion,
+                            @idVersion,
+                            @idUsuario,
+                            @idEstado,
+                            @comentario
+                        `;
+                    
+                        const request = new sql.Request();
+            
+                        request.input('idPeticion',sql.Int, idPeticion);
+                        request.input('idVersion', sql.SmallInt, idVersion);
+                        request.input('idUsuario', sql.VarChar(20), idUsuario);
+                        request.input('idEstado', sql.TinyInt, idEstado);
+                        request.input('comentario', sql.NVarChar(sql.MAX), comentario);
+            
+                        await request.query(query);
+                        logAction(`Aviso de redirección: La petición ha sido redirigida a otro Registro. idRespuesta: ${codigoTipoRespuesta} | ${textoIntermedio} | ${textoTipoRespuesta} | idCorpme: ${identificador} | idPeticion: ${idPeticion} | idVersion:${idPeticion}.`);
+                } else {
+                    console.error('No se encontraron idPeticion o idVersion asociados con el identificador corpme');
+                    logAction(`No se encontraron idPeticion o idVersion asociados con el identificador corpme`);
+                }
+
+                // Enviar confirmación sin el procesamiento del PDF
+                const confirmacionXml = fs.readFileSync(path.join(__dirname, 'xml/corpme_floti_ok.xml'), 'utf8');
+                res.set('Content-Type', 'text/xml');
+                res.send(confirmacionXml);
+
+            } catch (err) {
+                console.error('Error al guardar el tipo-respuesta en la base de datos:', err);
+                logAction(`Error al guardar el tipo-respuesta en la base de datos: ${err}`);
+                res.status(500).send('Error al procesar la respuesta');
+            }
         } else {
            // Notas denegadas 
             if (codigoTipoRespuesta === '12') {
             // Nota simple reenviada negativa
                 try {
-
                     // Obtener idPeticion y idVersion
                     const idPeticion = await getIdPeticionByIdCorpme(identificador);
                     const idVersion = await getIdVersionByIdCorpme(identificador);

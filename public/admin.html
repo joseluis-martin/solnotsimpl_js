@@ -17,7 +17,17 @@
         h1, h3 {
             color: #007bff;
         }
+        /* Estilo para el contenedor flexible */
+        .row-container {
+            display: flex;
+            gap: 20px; /* Espacio entre los bloques */
+            flex-wrap: wrap; /* Permite que se apilen en pantallas pequeñas */
+            justify-content: space-between; /* Espacio igual entre los bloques */
+        }
+ 
         .logs-container {
+            flex: 1; /* Hace que ambos bloques ocupen el mismo ancho */
+            min-width: 300px; /* Ancho mínimo para cada bloque */
             max-width: 100%;
             background-color: #fff;
             padding: 20px;
@@ -118,9 +128,22 @@
             <h1>Tasvalor eReg SysAdmin Dashboard</h1>
         </div>
 
-        <div class="logs-container mb-5">
-            <h3>Estado del Servidor</h3>
-            <pre id="status" class="p-3 bg-light border rounded">Cargando...</pre>
+        <div class="row-container">
+            <div class="logs-container mb-5">
+                <h3>Estado del Servidor</h3>
+                <pre id="status" class="p-3 bg-light border rounded">Cargando...</pre>
+            </div>
+        
+            <div class="logs-container mb-5">
+                <h3>Estadísticas de Peticiones</h3>
+                <div id="stats" class="p-3 bg-light border rounded">
+                    <p><strong>En Espera:</strong> <span id="statsEnEspera">0</span></p>
+                    <p><strong>Respondidas con Éxito:</strong> <span id="statsRespondidas">0</span></p>
+                    <p><strong>Denegadas:</strong> <span id="statsDenegadas">0</span></p>
+                    <p><strong>Anuladas:</strong> <span id="statsAnuladas">0</span></p>
+                </div>
+                <button id="refreshStats" class="btn btn-primary mt-3">Actualizar Estadísticas</button>
+            </div>
         </div>
 
         <div class="logs-container mb-5">
@@ -204,6 +227,23 @@
             alert(data.message);
         }
 
+        async function getStats() {
+            try {
+                const response = await fetch('/stats');
+                const data = await response.json();
+
+                document.getElementById('statsEnEspera').textContent = data.enEspera;
+                document.getElementById('statsRespondidas').textContent = data.respondidas;
+                document.getElementById('statsDenegadas').textContent = data.denegadas;
+                document.getElementById('statsAnuladas').textContent = data.anuladas;
+            } catch (error) {
+                console.error('Error al obtener estadísticas de peticiones:', error);
+            }
+        }
+
+        // Añadir evento al botón para actualizar las estadísticas al hacer clic
+        document.getElementById('refreshStats').addEventListener('click', getStats);
+
         //document.getElementById('stopServer').addEventListener('click', stopServer);
         //document.getElementById('restartServer').addEventListener('click', restartServer);
 
@@ -225,6 +265,7 @@
         // Actualiza el estado y los logs periódicamente
         getStatus();
         getLogs(currentPage, currentDate);
+        getStats();
 
         // Generación de los dbfs pendientes
         document.getElementById('processDBFs').addEventListener('click', async () => {

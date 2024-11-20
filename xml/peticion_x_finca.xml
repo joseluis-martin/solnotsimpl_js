@@ -15,6 +15,7 @@
             <provincia></provincia>
 	        <seccion></seccion>
 	        <finca></finca>
+          <subfinca></subfinca>
         </datos-registrales>
         <referencia>RF2</referencia>
         <observaciones></observaciones>

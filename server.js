@@ -493,8 +493,6 @@ async function sendXMLxFinca(resultados) {
             parsedXml['corpme-floti'].peticiones[0].credenciales[0].entidad[0] = CREDENCIALES.ENTIDAD;
             parsedXml['corpme-floti'].peticiones[0].credenciales[0].grupo[0] = CREDENCIALES.GRUPO;
             parsedXml['corpme-floti'].peticiones[0].credenciales[0].usuario[0] = CREDENCIALES.USUARIO;
- 
-            //parsedXml['corpme-floti'].peticiones[0].credenciales[0].email[0] = CREDENCIALES.EMAIL;
 
             // Obtener email del usuario de la base de datos con la función  usar valor predeterminado
             await sql.connect(config);
@@ -510,7 +508,27 @@ async function sendXMLxFinca(resultados) {
             parsedXml['corpme-floti'].peticiones[0].peticion[0]['datos-registrales'][0].municipio[0] = parseInt(municipio, 10);
             parsedXml['corpme-floti'].peticiones[0].peticion[0]['datos-registrales'][0].provincia[0] = parseInt(provincia, 10);
             parsedXml['corpme-floti'].peticiones[0].peticion[0]['datos-registrales'][0].seccion[0] = parseInt(seccion, 10);
-            parsedXml['corpme-floti'].peticiones[0].peticion[0]['datos-registrales'][0].finca[0] = parseInt(finca, 10);
+                        
+            // Procesar la variable 'finca' para separar finca y subfinca si es necesario
+            let fincaValue, subfincaValue;
+
+            // Verificar si la cadena contiene un separador '/'
+            if (finca.includes('/')) {
+                const [firstPart, secondPart] = finca.split('/');
+                fincaValue = parseInt(firstPart, 10); // Convertir la primera parte a un número entero
+                subfincaValue = secondPart; // Mantener la segunda parte como cadena
+            } else {
+                fincaValue = parseInt(finca, 10); // Si no hay '/', usar el valor como entero
+                subfincaValue = null; // No hay subfinca
+            }
+
+            // Asignar los valores procesados al XML
+            parsedXml['corpme-floti'].peticiones[0].peticion[0]['datos-registrales'][0].finca[0] = fincaValue;
+
+            if (subfincaValue) {
+                parsedXml['corpme-floti'].peticiones[0].peticion[0]['datos-registrales'][0].subfinca = [subfincaValue];
+            }
+            
             parsedXml['corpme-floti'].peticiones[0].peticion[0].observaciones[0] = observaciones;
             parsedXml['corpme-floti'].peticiones[0].peticion[0].referencia = `RF_${idPeticion}_${idVersion}`;
 

@@ -138,6 +138,7 @@ certificados/
 uploads/
 xml_enviados/
 xml_recibidos/
+xml_facturas_recibidas/
 pdf/
 Certificado_SSL/
 dbfs_generados/

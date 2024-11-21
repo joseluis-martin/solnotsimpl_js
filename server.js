@@ -92,7 +92,7 @@ async function modificarDBFConPython(idPeticion, idVersion) {
         const idDocumento = queryidDocumentoResult.recordset[0].idDocumento;
         const NombreArchivoDoc = `${idDocumento}.dbf`
 
-        console.log(IM_ANO_CLA, IM_NUM_TAS, IM_SUP_TAS, IMAGEN, idDocumento);
+        //console.log(IM_ANO_CLA, IM_NUM_TAS, IM_SUP_TAS, IMAGEN, idDocumento);
 
         // Llamar al script Python y pasar los argumentos
         exec(`python modificar_dbf.py ${IM_ANO_CLA} ${IM_NUM_TAS} ${IM_SUP_TAS} ${IMAGEN} ${NombreArchivoDoc}`, 
@@ -1626,6 +1626,8 @@ async function processCorpmeFlotiFacturacion(xmlData, res) {
 
     if (facturacionData) {
         // Extraer datos principales de facturación
+        const idFactura = facturacion.$['id'];
+        const idUsuario = facturacionData.$['id'];
         const importeBase = facturacionData.$['importe-base'];
         const importeImpuesto = facturacionData.$['importe-impuesto'];
         const periodoInicio = facturacionData.$['periodo-inicio'];
@@ -1636,19 +1638,118 @@ async function processCorpmeFlotiFacturacion(xmlData, res) {
             await sql.connect(config);
 
             // Insertar datos en la tabla facturación_factura
-            const facturaQuery = `INSERT INTO facturacion_factura ("factura_importe-base", "factura_importe-impuesto", "factura_periodo-inicio", "factura_periodo-fin")
-                                OUTPUT INSERTED.factura_id 
-                                VALUES (@importe_base, @importe_impuesto, @periodo_inicio, @periodo_fin);`;
+            const facturaQuery = `INSERT INTO facturacion_factura ("factura_idFactura", "factura_idUsuario", "factura_importe-base", "factura_importe-impuesto", "factura_periodo-inicio", "factura_periodo-fin")
+                                OUTPUT INSERTED.factura_idTabla 
+                                VALUES (@id_factura, @id_usuario, @importe_base, @importe_impuesto, @periodo_inicio, @periodo_fin);`;
             const requestFactura = new sql.Request();
+            requestFactura.input('id_factura', sql.VarChar(50), idFactura);
+            requestFactura.input('id_usuario', sql.VarChar(50), idUsuario);
             requestFactura.input('importe_base', sql.Money, parseFloat(importeBase));
             requestFactura.input('importe_impuesto', sql.Money, parseFloat(importeImpuesto));
             requestFactura.input('periodo_inicio', sql.SmallDateTime, new Date(periodoInicio));
             requestFactura.input('periodo_fin', sql.SmallDateTime, new Date(periodoFin));
 
             const result = await requestFactura.query(facturaQuery);
-            const facturaId = result.recordset[0].factura_id;
+            const IdTabla = result.recordset[0].factura_idTabla;
 
             for (let factura of facturacionData.factura) {
+
+                // Extraer información del nodo 'factura'
+                const ejercicio = factura.$['ejercicio'];
+                const fechaFactura = factura.$['fecha'];
+                const numeroFactura = factura.$['numero'];
+                const regimenCajaB = factura.$['regimen-caja'];
+                let regimenCaja = 0;
+                if (regimenCajaB=='true'){
+                    regimenCaja = 1;
+                }
+                const serie = factura.$['serie'];
+
+                // Extraer datos del nodo 'emisor'
+                const emisor = factura.emisor ? factura.emisor[0].$ : {};
+                let emisorNif = emisor['nif'];
+                // Completar con ceros a la izquierda
+                if (emisorNif) {
+                    emisorNif = emisorNif.padStart(9, '0');
+                }
+                let emisorCp = emisor['cp'];
+                // Completar con ceros a la izquierda
+                if (emisorCp) {
+                    emisorCp = emisorCp.padStart(5, '0');
+                }
+                const emisorDomicilio = emisor['domicilio'];
+                const emisorMunicipio = emisor['municipio'];
+                const emisorNombre = emisor['nombre'];
+                const emisorProvincia = emisor['provincia'];
+
+                // Extraer datos del nodo 'importe'
+                const importe = factura.importe ? factura.importe[0].$ : {};
+                const peticionBase = importe['base'];
+                const peticionImpuesto = importe['impuesto'];
+                const peticionIrpf = importe['irpf'];
+
+                // Verificar si hay un valor único en la tabla registros_emisor
+                let codigoRegistro = 0;
+                let descripcionEmplazamiento = 'No hay datos o hay más de un registro';
+
+                if (emisorNif) {
+                    const codigoRegistroQuery = `
+                        SELECT CodigoRegistro 
+                        FROM registros_emisor 
+                        WHERE NIFEmisor = @emisor_nif 
+                        GROUP BY CodigoRegistro 
+                        HAVING COUNT(*) = 1;`;
+                    const requestCodigo = new sql.Request();
+                    requestCodigo.input('emisor_nif', sql.VarChar(20), emisorNif);
+
+                    const resultCodigo = await requestCodigo.query(codigoRegistroQuery);
+                    if (resultCodigo.recordset.length === 1) {
+                        codigoRegistro = resultCodigo.recordset[0].CodigoRegistro;
+
+                        // Obtener la descripción del emplazamiento
+                        const descripcionQuery = `
+                            SELECT Descripcion 
+                            FROM registros_emplazamiento 
+                            WHERE CodigoRegistro = @codigo_registro;`;
+                        const requestDescripcion = new sql.Request();
+                        requestDescripcion.input('codigo_registro', sql.Int, codigoRegistro);
+
+                        const resultDescripcion = await requestDescripcion.query(descripcionQuery);
+                        if (resultDescripcion.recordset.length === 1) {
+                            const Descrip = resultDescripcion.recordset[0].Descripcion;
+                            descripcionEmplazamiento = `Registro de la Propiedad de ${Descrip}`;
+                        } else {
+                            logAction(`No se encontró una descripción única para CodigoRegistro: ${codigoRegistro}`);
+                        }
+                    } else {
+                        logAction(`No se encontró un único registro para el NIF: ${emisorNif}`);
+                    }
+                            
+                    // Insertar datos en la tabla facturacion_emisor
+                    const emisorQuery = `
+                    INSERT INTO facturacion_emisor (factura_idTabla, emisor_codigoRegistro, emisor_nombreRegistro, emisor_nif, emisor_nombre, emisor_domicilio, emisor_municipio, emisor_provincia, emisor_cp, "emisor_fecha-factura", emisor_ejercicio, emisor_serie, emisor_numero, "emisor_regimen-caja") 
+                    VALUES (@factura_idTabla, @codigo_registro, @descripcion_emplazamiento, @nif, @nombre, @domicilio, @municipio, @provincia, @cp, @fecha_factura, @ejercicio, @serie, @numero, @regimen_caja);`;
+                    const requestEmisor = new sql.Request();
+                    requestEmisor.input('factura_idTabla', sql.Int, IdTabla); // facturaId debe ser el ID autoincremental de la factura
+                    requestEmisor.input('codigo_registro', sql.Int, codigoRegistro);
+                    requestEmisor.input('descripcion_emplazamiento', sql.VarChar(250), descripcionEmplazamiento);
+                    requestEmisor.input('nif', sql.VarChar(20), emisorNif);
+                    requestEmisor.input('nombre', sql.VarChar(250), emisorNombre);
+                    requestEmisor.input('domicilio', sql.VarChar(250), emisorDomicilio);
+                    requestEmisor.input('municipio', sql.VarChar(250), emisorMunicipio);
+                    requestEmisor.input('provincia', sql.VarChar(50), emisorProvincia);
+                    requestEmisor.input('cp', sql.VarChar(5), emisorCp);
+                    requestEmisor.input('fecha_factura', sql.SmallDateTime, fechaFactura);
+                    requestEmisor.input('ejercicio', sql.Int, ejercicio);
+                    requestEmisor.input('serie', sql.VarChar(10), serie);
+                    requestEmisor.input('numero', sql.VarChar(5), numeroFactura);
+                    requestEmisor.input('regimen_caja', sql.Int, regimenCaja);
+
+                    await requestEmisor.query(emisorQuery);
+                    logAction(`Registro agregado a facturacion_emisor: factura_idTabla=${IdTabla}, codigoRegistro=${codigoRegistro}`);          
+                        
+                }
+
                 // Asegurarse de que 'peticion' sea un array.
                 const peticiones = Array.isArray(factura.peticion) ? factura.peticion : [factura.peticion];
             
@@ -1656,31 +1757,35 @@ async function processCorpmeFlotiFacturacion(xmlData, res) {
                 for (let peticion of peticiones) {
                     if (peticion) {
                         // Extraer datos de la petición
-                        const grupo = peticion.$['grupo'];
-                        const id = peticion.$['id'];
-                        const usuario = peticion.$['usuario'];
+                        // const grupo = peticion.$['grupo'];
+                        const idPeticion = peticion.$['id'];
+                        // const usuario = peticion.$['usuario'];
                         const fecha = peticion.$['fecha'];
                         const fechaRespuesta = peticion.$['fecha-respuesta'];
-                        const tipo = peticion.$['tipo'];
+                        // const tipo = peticion.$['tipo'];
                         const importeBasePeticion = peticion.$['importe-base'];
                         const porcentajeImpuesto = peticion.$['porcentaje-impuesto'];
+                        const referencia = peticion.$['referencia'];
             
                         // Insertar datos en la tabla facturación_peticion
-                        const peticionQuery = `INSERT INTO facturacion_peticion (factura_id, peticion_grupo, peticion_id, peticion_usuario, peticion_fecha, "peticion_fecha-respuesta", peticion_tipo, "peticion_importe-base", "peticion_porcentaje-impuesto") 
-                                                VALUES (@factura_id, @grupo, @id, @usuario, @fecha, @fecha_respuesta, @tipo, @importe_base, @porcentaje_impuesto);`;
+                        const peticionQuery = `INSERT INTO facturacion_peticion (factura_idTabla, emisor_codigoRegistro, emisor_nif, peticion_base, peticion_impuesto, peticion_irpf, peticion_idCorpme, "peticion_fecha-peticion", "peticion_fecha-respuesta","peticion_importe-base","peticion_porcentaje-impuesto", peticion_referencia) 
+                        VALUES (@factura_idTabla, @emisor_codigoRegistro, @emisor_nif, @peticion_base, @peticion_impuesto, @peticion_irpf, @id_peticion, @fecha, @fecha_respuesta, @importe_base, @porcentaje_impuesto, @referencia);`;
                         const requestPeticion = new sql.Request();
-                        requestPeticion.input('factura_id', sql.Int, facturaId);
-                        requestPeticion.input('grupo', sql.VarChar(50), grupo);
-                        requestPeticion.input('id', sql.VarChar(50), id);
-                        requestPeticion.input('usuario', sql.VarChar(50), usuario);
+                        requestPeticion.input('factura_idTabla', sql.Int,  IdTabla);
+                        requestPeticion.input('emisor_codigoRegistro', sql.Int, codigoRegistro);
+                        requestPeticion.input('emisor_nif', sql.VarChar(20), emisorNif);
+                        requestPeticion.input('peticion_base', sql.Money, parseFloat(peticionBase));
+                        requestPeticion.input('peticion_impuesto', sql.Money, parseFloat(peticionImpuesto));
+                        requestPeticion.input('peticion_irpf', sql.Money, parseFloat(peticionIrpf));
+                        requestPeticion.input('id_peticion', sql.VarChar(50), idPeticion);
                         requestPeticion.input('fecha', sql.SmallDateTime, new Date(fecha));
                         requestPeticion.input('fecha_respuesta', sql.SmallDateTime, new Date(fechaRespuesta));
-                        requestPeticion.input('tipo', sql.Int(4), tipo);
                         requestPeticion.input('importe_base', sql.Money, parseFloat(importeBasePeticion));
                         requestPeticion.input('porcentaje_impuesto', sql.Decimal(5, 2), parseFloat(porcentajeImpuesto));
-            
+                        requestPeticion.input('referencia', sql.VarChar(50), referencia);
+
                         await requestPeticion.query(peticionQuery);
-                        logAction(`Información de facturación almacenada factura_id: ${facturaId}`);
+                        logAction(`Información de facturación almacenada factura_id: ${IdTabla}`);
                     }
                 }
             }

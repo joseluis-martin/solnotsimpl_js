@@ -1,0 +1,148 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<corpme-floti-facturacion xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" id="F11767" xsi:noNamespaceSchemaLocation="http://www.registradores.org/schema/floti/facturacion.xsd">
+  <facturacion id="GTREGAPP" importe-base="144.32" importe-impuesto="27.47" periodo-fin="2024-10-31" periodo-inicio="2024-10-01">
+    <factura ejercicio="2024" fecha="2024-10-31" numero="313" regimen-caja="false" serie="Z2">
+      <emisor cp="6900" domicilio="C/ Francisco de Peñaranda, nº 3" municipio="LLERENA" nif="76654376T" nombre="JULIO SOTO ANTUNEZ" provincia="BADAJOZ"/>
+      <destinatario cp="28034" domicilio="Calle Manuel Tovar, 16 - Planta Segunda" municipio="MADRID" nif="A80639990" nombre="GRUPO TASVALOR SA" provincia="MADRID"/>
+      <importe base="9.02" impuesto="1.89" irpf="1.35" total="9.56"/>
+      <peticion destino="lourdesdiaz@grupotasvalor.es" fecha="2024-10-31T11:18:00Z" fecha-respuesta="2024-10-31T11:28:00Z" grupo="GRUPO TASVALOR, S.A." id="F48PN29H4" importe-base="9.02" porcentaje-impuesto="21" referencia="RF_33_1" tipo="0" usuario="GTREGAPP"/>
+    </factura>
+    <factura ejercicio="2024" fecha="2024-10-31" numero="523" regimen-caja="false" serie="Z5">
+      <emisor cp="8760" domicilio="Ausias March, esq. Verge del Tiscar, s/n " municipio="MARTORELL" nif="52605703B" nombre="ESTHER RADA PELEGRI" provincia="BARCELONA"/>
+      <destinatario cp="28034" domicilio="Calle Manuel Tovar, 16 - Planta Segunda" municipio="MADRID" nif="A80639990" nombre="GRUPO TASVALOR SA" provincia="MADRID"/>
+      <importe base="9.02" impuesto="1.89" irpf="1.35" total="9.56"/>
+      <peticion destino="jptrujillo@grupotasvalor.es" fecha="2024-10-31T10:47:00Z" fecha-respuesta="2024-10-31T11:41:00Z" grupo="GRUPO TASVALOR, S.A." id="F48PN16H7" importe-base="9.02" porcentaje-impuesto="21" referencia="RF_32_1" tipo="0" usuario="GTREGAPP"/>
+    </factura>
+    <factura ejercicio="2024" fecha="2024-10-31" numero="367" regimen-caja="false" serie="Z4">
+      <emisor cp="11630" domicilio="Pedro Almodovar 4-6" municipio="ARCOS DE LA FRONTERA" nif="31649244W" nombre="MARIA JESUS VOZMEDIANO TORRES" provincia="CADIZ"/>
+      <destinatario cp="28034" domicilio="Calle Manuel Tovar, 16 - Planta Segunda" municipio="MADRID" nif="A80639990" nombre="GRUPO TASVALOR SA" provincia="MADRID"/>
+      <importe base="18.04" impuesto="3.79" irpf="2.71" total="19.12"/>
+      <peticion destino="jptrujillo@grupotasvalor.es" fecha="2024-10-30T09:30:00Z" fecha-respuesta="2024-10-31T08:25:00Z" grupo="GRUPO TASVALOR, S.A." id="F48PF37C4" importe-base="9.02" porcentaje-impuesto="21" referencia="RF_29_1" tipo="0" usuario="GTREGAPP"/>
+      <peticion destino="jptrujillo@grupotasvalor.es" fecha="2024-10-30T09:30:00Z" fecha-respuesta="2024-10-31T08:26:00Z" grupo="GRUPO TASVALOR, S.A." id="F48PF37H6" importe-base="9.02" porcentaje-impuesto="21" referencia="RF_30_1" tipo="0" usuario="GTREGAPP"/>
+    </factura>
+    <factura ejercicio="2024" fecha="2024-10-31" numero="532" regimen-caja="false" serie="Z5">
+      <emisor cp="11204" domicilio="Calle Salvador Cabrera s/n. Edificio Registro" municipio="ALGECIRAS" nif="1494355E" nombre="EDUARDO-JOSE MARTINEZ GARCIA" provincia="CADIZ"/>
+      <destinatario cp="28034" domicilio="Calle Manuel Tovar, 16 - Planta Segunda" municipio="MADRID" nif="A80639990" nombre="GRUPO TASVALOR SA" provincia="MADRID"/>
+      <importe base="9.02" impuesto="1.89" irpf="1.35" total="9.56"/>
+      <peticion destino="jptrujillo@grupotasvalor.es" fecha="2024-10-30T09:20:00Z" fecha-respuesta="2024-10-31T08:26:00Z" grupo="GRUPO TASVALOR, S.A." id="F48PF31N2" importe-base="9.02" porcentaje-impuesto="21" referencia="RF_28_1" tipo="0" usuario="GTREGAPP"/>
+    </factura>
+    <factura ejercicio="2024" fecha="2024-10-31" numero="245" regimen-caja="false" serie="Z1">
+      <emisor cp="15810" domicilio="Lugo 2 , 1º Izquierda" municipio="ARZUA" nif="48152969P" nombre="BEATRIZ MARIA BELMAR MADRID" provincia="A CORUÑA"/>
+      <destinatario cp="28034" domicilio="Calle Manuel Tovar, 16 - Planta Segunda" municipio="MADRID" nif="A80639990" nombre="GRUPO TASVALOR SA" provincia="MADRID"/>
+      <importe base="9.02" impuesto="1.89" irpf="1.35" total="9.56"/>
+      <peticion destino="jptrujillo@grupotasvalor.es" fecha="2024-10-23T08:33:00Z" fecha-respuesta="2024-10-23T11:20:00Z" grupo="GRUPO TASVALOR, S.A." id="F48MT37Q8" importe-base="9.02" porcentaje-impuesto="21" referencia="RF_21_1" tipo="0" usuario="GTREGAPP"/>
+    </factura>
+    <factura ejercicio="2024" fecha="2024-10-31" numero="494" regimen-caja="true" serie="Z6">
+      <emisor cp="15300" domicilio="Doctor Jose Fariña, 3 - bajo" municipio="BETANZOS" nif="33255159B" nombre="JESUS FERNANDEZ BREA" provincia="A CORUÑA"/>
+      <destinatario cp="28034" domicilio="Calle Manuel Tovar, 16 - Planta Segunda" municipio="MADRID" nif="A80639990" nombre="GRUPO TASVALOR SA" provincia="MADRID"/>
+      <importe base="27.06" impuesto="5.68" irpf="4.06" total="28.68"/>
+      <peticion destino="jptrujillo@grupotasvalor.es" fecha="2024-10-24T10:01:00Z" fecha-respuesta="2024-10-25T05:33:00Z" grupo="GRUPO TASVALOR, S.A." id="F48NC69T9" importe-base="9.02" porcentaje-impuesto="21" referencia="RF_23_1" tipo="0" usuario="GTREGAPP"/>
+      <peticion destino="jptrujillo@grupotasvalor.es" fecha="2024-10-24T10:40:00Z" fecha-respuesta="2024-10-25T05:59:00Z" grupo="GRUPO TASVALOR, S.A." id="F48NC90N3" importe-base="9.02" porcentaje-impuesto="21" referencia="RF_24_1" tipo="0" usuario="GTREGAPP"/>
+      <peticion destino="jptrujillo@grupotasvalor.es" fecha="2024-10-24T10:40:00Z" fecha-respuesta="2024-10-25T06:10:00Z" grupo="GRUPO TASVALOR, S.A." id="F48NC90N4" importe-base="9.02" porcentaje-impuesto="21" referencia="RF_25_1" tipo="0" usuario="GTREGAPP"/>
+    </factura>
+    <factura ejercicio="2024" fecha="2024-10-31" numero="349" regimen-caja="false" serie="Z9">
+      <emisor cp="15100" domicilio="Luis Calvo Sanz, 32 Bajo." municipio="CARBALLO" nif="32833615B" nombre="PATRICIA OLIVEROS VILLAR" provincia="A CORUÑA"/>
+      <destinatario cp="28034" domicilio="Calle Manuel Tovar, 16 - Planta Segunda" municipio="MADRID" nif="A80639990" nombre="GRUPO TASVALOR SA" provincia="MADRID"/>
+      <importe base="9.02" impuesto="1.89" irpf="1.35" total="9.56"/>
+      <peticion destino="jptrujillo@grupotasvalor.es" fecha="2024-10-22T12:34:00Z" fecha-respuesta="2024-10-23T06:28:00Z" grupo="GRUPO TASVALOR, S.A." id="F48MP89F0" importe-base="9.02" porcentaje-impuesto="21" referencia="RF_20_1" tipo="0" usuario="GTREGAPP"/>
+    </factura>
+    <factura ejercicio="2024" fecha="2024-10-31" numero="544" regimen-caja="false" serie="Z5">
+      <emisor cp="15006" domicilio="Novoa Santos 5 y 7" municipio="CORUÑA (A)" nif="19887420X" nombre="ENRIQUE RODRIGUEZ LLORENS" provincia="A CORUÑA"/>
+      <destinatario cp="28034" domicilio="Calle Manuel Tovar, 16 - Planta Segunda" municipio="MADRID" nif="A80639990" nombre="GRUPO TASVALOR SA" provincia="MADRID"/>
+      <importe base="9.02" impuesto="1.89" irpf="1.35" total="9.56"/>
+      <peticion destino="jptrujillo@grupotasvalor.es" fecha="2024-10-23T14:35:00Z" fecha-respuesta="2024-10-24T09:33:00Z" grupo="GRUPO TASVALOR, S.A." id="F48MZ01U2" importe-base="9.02" porcentaje-impuesto="21" referencia="RF_22_1" tipo="0" usuario="GTREGAPP"/>
+    </factura>
+    <factura ejercicio="2024" fecha="2024-10-31" numero="497" regimen-caja="false" serie="Z6">
+      <emisor cp="20018" domicilio="Plaza Julio Caro Baroja, 1 - 1º" municipio="SAN SEBASTIAN" nif="34102911Y" nombre="MARIA MICAELA CURTO ERASO" provincia="GUIPUZCOA"/>
+      <destinatario cp="28034" domicilio="Calle Manuel Tovar, 16 - Planta Segunda" municipio="MADRID" nif="A80639990" nombre="GRUPO TASVALOR SA" provincia="MADRID"/>
+      <importe base="9.02" impuesto="1.89" irpf="1.35" total="9.56"/>
+      <peticion destino="lourdesdiaz@grupotasvalor.es" fecha="2024-10-31T11:18:00Z" fecha-respuesta="2024-10-31T12:38:00Z" grupo="GRUPO TASVALOR, S.A." id="F48PN29H6" importe-base="9.02" porcentaje-impuesto="21" referencia="RF_34_1" tipo="0" usuario="GTREGAPP"/>
+    </factura>
+    <factura ejercicio="2024" fecha="2024-10-31" numero="803" regimen-caja="false" serie="Z6">
+      <emisor cp="25006" domicilio="Paseo de Ronda, 87-89, altillo (Pasaje Brasilia)" municipio="LLEIDA" nif="07500018V" nombre="JESUS SANZ FERNANDEZ" provincia="LLEIDA"/>
+      <destinatario cp="28034" domicilio="Calle Manuel Tovar, 16 - Planta Segunda" municipio="MADRID" nif="A80639990" nombre="GRUPO TASVALOR SA" provincia="MADRID"/>
+      <importe base="9.02" impuesto="1.89" irpf="1.35" total="9.56"/>
+      <peticion destino="grupotasvalor@grupotasvalor.es" fecha="2024-10-18T08:32:00Z" fecha-respuesta="2024-10-21T06:38:00Z" grupo="GRUPO TASVALOR, S.A." id="F48HU41M7" importe-base="9.02" porcentaje-impuesto="21" referencia="RF_18_3" tipo="0" usuario="GTREGAPP"/>
+    </factura>
+    <factura ejercicio="2024" fecha="2024-10-31" numero="305" regimen-caja="false" serie="Z1">
+      <emisor cp="35007" domicilio="Emilio Castelar, 4-6, 3ª planta - Edif. Internacional" municipio="PALMAS DE GRAN CANARIA (LAS)" nif="51517967Z" nombre="BEATRIZ ZAMORA RODRIGUEZ" provincia="LAS PALMAS"/>
+      <destinatario cp="28034" domicilio="Calle Manuel Tovar, 16 - Planta Segunda" municipio="MADRID" nif="A80639990" nombre="GRUPO TASVALOR SA" provincia="MADRID"/>
+      <importe base="9.02" impuesto="0.63" irpf="1.35" total="8.30"/>
+      <peticion destino="jptrujillo@grupotasvalor.es" fecha="2024-10-30T08:49:00Z" fecha-respuesta="2024-10-30T09:28:00Z" grupo="GRUPO TASVALOR, S.A." id="F48PF17C6" importe-base="9.02" porcentaje-impuesto="7" referencia="RF_27_1" tipo="0" usuario="GTREGAPP"/>
+    </factura>
+    <factura ejercicio="2024" fecha="2024-10-31" numero="681" regimen-caja="false" serie="Z8">
+      <emisor cp="43004" domicilio="Pons Icart, 2" municipio="TARRAGONA" nif="16533946M" nombre="JOAQUIN MARIA LARRONDO LIZARRAGA" provincia="TARRAGONA"/>
+      <destinatario cp="28034" domicilio="Calle Manuel Tovar, 16 - Planta Segunda" municipio="MADRID" nif="A80639990" nombre="GRUPO TASVALOR SA" provincia="MADRID"/>
+      <importe base="9.02" impuesto="1.89" irpf="1.35" total="9.56"/>
+      <peticion destino="grupotasvalor@grupotasvalor.es" fecha="2024-10-21T10:51:00Z" fecha-respuesta="2024-10-22T07:25:00Z" grupo="GRUPO TASVALOR, S.A." id="F48MH52F4" importe-base="9.02" porcentaje-impuesto="21" referencia="RF_19_1" tipo="0" usuario="GTREGAPP"/>
+    </factura>
+    <factura ejercicio="2024" fecha="2024-10-31" numero="212" regimen-caja="true" serie="Z1">
+      <emisor cp="52001" domicilio="O´DONNELL 5,1º" municipio="MELILLA" nif="16265148P" nombre="JUAN PABLO GARCIA YUSTO" provincia="MELILLA"/>
+      <destinatario cp="28034" domicilio="Calle Manuel Tovar, 16 - Planta Segunda" municipio="MADRID" nif="A80639990" nombre="GRUPO TASVALOR SA" provincia="MADRID"/>
+      <importe base="9.02" impuesto="0.36" irpf="0.54" total="8.84"/>
+      <peticion destino="jptrujillo@grupotasvalor.es" fecha="2024-10-30T09:50:00Z" fecha-respuesta="2024-10-30T10:20:00Z" grupo="GRUPO TASVALOR, S.A." id="F48PF51T2" importe-base="9.02" porcentaje-impuesto="4" referencia="RF_31_1" tipo="0" usuario="GTREGAPP"/>
+    </factura>
+  </facturacion>
+  <ds:signature xmlns:ds="http://www.w3.org/2000/09/xmldsig#">
+    <ds:signedinfo>
+      <ds:canonicalizationmethod Algorithm="http://www.w3.org/TR/2001/REC-xml-c14n-20010315"/>
+      <ds:signaturemethod Algorithm="http://www.w3.org/2000/09/xmldsig#rsa-sha1"/>
+      <ds:reference URI="#F11767">
+        <ds:transforms>
+          <ds:transform Algorithm="http://www.w3.org/2000/09/xmldsig#enveloped-signature"/>
+          <ds:transform Algorithm="http://www.w3.org/TR/2001/REC-xml-c14n-20010315#WithComments"/>
+          <ds:transform Algorithm="http://www.w3.org/2002/06/xmldsig-filter2">
+            <dsig-xpath:xpath xmlns:dsig-xpath="http://www.w3.org/2002/06/xmldsig-filter2" Filter="subtract">//informacion</dsig-xpath:xpath>
+          </ds:transform>
+        </ds:transforms>
+        <ds:digestmethod Algorithm="http://www.w3.org/2000/09/xmldsig#sha1"/>
+        <ds:digestvalue>kuJFN/Sig9uBJz98K8c1KIA7XAY=</ds:digestvalue>
+      </ds:reference>
+    </ds:signedinfo>
+    <ds:signaturevalue>YbMT43XF2yL8Df895DkML2CHxbq+2rmrwyNhW8okTJKeoq5gMYflP7YWQ6d7ZrV5BpoC6VFOulGY
+yhDlL/8ZveAMwx1vH5v43NLDIx237ypswcXBmhSqcBIpz1cF7KZx17hzpDHAxLqUQUc4TEDOB6Bh
+tXa9oRYqMKEy+FFP9qWfdNrZZD3l8i0tr3GZ3mqmZu6yKZmDbYfdb7slR75rVjGaAT4GSKyUHrnp
+k0WV8NrFNVpeyukBzqkbLsDWyk3VxeKr10ARv1Rpi6Ajk+xkZeqrsTrLVdGfwfjRnOhonCMdDeXb
+RU91oQAbh1lQe7FoZtDpS+2ruhQrKHA+4YmRuA==</ds:signaturevalue>
+    <ds:keyinfo>
+      <ds:x509data>
+        <ds:x509certificate>MIIH7zCCBtegAwIBAgIQTZsEAghNmQtmFops18cpUzANBgkqhkiG9w0BAQsFADBNMQswCQYDVQQG
+EwJFUzERMA8GA1UECgwIRk5NVC1SQ00xDjAMBgNVBAsMBUNFUkVTMRswGQYDVQQDDBJBQyBSZXBy
+ZXNlbnRhY2nDs24wHhcNMjQwNDEwMTI0NzQwWhcNMjcwNDEwMTI0NzQwWjCBqDELMAkGA1UEBhMC
+RVMxDzANBgNVBAcMBk1BRFJJRDEsMCoGA1UECgwjQ09MRUdJTyBERSBSRUdJU1RSQURPUkVTIERF
+IEVTUEHDkUExEjAQBgNVBAUTCVEyODYzMDEyRzEYMBYGA1UEYQwPVkFURVMtUTI4NjMwMTJHMSww
+KgYDVQQDDCNDT0xFR0lPIERFIFJFR0lTVFJBRE9SRVMgREUgRVNQQcORQTCCASIwDQYJKoZIhvcN
+AQEBBQADggEPADCCAQoCggEBAIMf/gfXiWQcIg+f7NiFZ7SD79Of/mrCSrglBaxiLqhL2PBW+ckp
+OXTwviyMcMk9x+PaqqZP0k4qtYb29VLih612Jy+INnGXyH9Y8LFhiEvG6JCdoZPILKNdXp24np9V
+EgGMEtPnx63qDDyNFNrmTZg1WbpPDFdwCCGMb42T+3NVCSnu2pKW9ePXU5BulWo9SU/S2ulbznlu
+VPw16/57XfQhjAGQzt0ORppLMTJxuu9QtTN2PMGsBTsLM+zfBk1LF0/3nZX8hwbUcjafvPtBzWlh
+jlEOATitVY77v6LqceDyAFCXS61/dyW46A12PhDZG1D+3+dU2uApHVdGUdc72CsCAwEAAaOCBG0w
+ggRpMIGTBgNVHREEgYswgYikgYUwgYIxMjAwBgkrBgEEAaxmAQgMI0NPTEVHSU8gREUgUkVHSVNU
+UkFET1JFUyBERSBFU1BBw5FBMRgwFgYJKwYBBAGsZgEHDAlRMjg2MzAxMkcxMjAwBgkrBgEEAaxm
+AQYMI0NPTEVHSU8gREUgUkVHSVNUUkFET1JFUyBERSBFU1BBw5FBMAwGA1UdEwEB/wQCMAAwDgYD
+VR0PAQH/BAQDAgXgMCoGA1UdJQQjMCEGCCsGAQUFBwMCBgorBgEEAYI3CgMMBgkqhkiG9y8BAQUw
+gYIGCCsGAQUFBwEBBHYwdDA9BggrBgEFBQcwAYYxaHR0cDovL29jc3ByZXAuY2VydC5mbm10LmVz
+L29jc3ByZXAvT2NzcFJlc3BvbmRlcjAzBggrBgEFBQcwAoYnaHR0cDovL3d3dy5jZXJ0LmZubXQu
+ZXMvY2VydHMvQUNSRVAuY3J0MB0GA1UdDgQWBBQ6z+tetoHBXlqzII1tcRRPW1kByzCCATMGA1Ud
+IASCASowggEmMIIBFwYKKwYBBAGsZgMLBDCCAQcwKQYIKwYBBQUHAgEWHWh0dHA6Ly93d3cuY2Vy
+dC5mbm10LmVzL2RwY3MvMIHZBggrBgEFBQcCAjCBzAyByUNlcnRpZmljYWRvIGN1YWxpZmljYWRv
+IGRlIHNlbGxvIGVsZWN0csOzbmljbyBzZWfDum4gcmVnbGFtZW50byBldXJvcGVvIGVJREFTLiBT
+dWpldG8gYSBsYXMgY29uZGljaW9uZXMgZGUgdXNvIGV4cHVlc3RhcyBlbiBsYSBEUEMgZGUgRk5N
+VC1SQ00gY29uIE5JRjogUTI4MjYwMDRKIChDL0pvcmdlIEp1YW4gMTA2LTI4MDA5LU1hZHJpZC1F
+c3Bhw7FhKTAJBgcEAIvsQAEBMIGmBggrBgEFBQcBAwSBmTCBljAIBgYEAI5GAQEwEwYGBACORgEG
+MAkGBwQAjkYBBgIwaAYGBACORgEFMF4wLRYnaHR0cHM6Ly93d3cuY2VydC5mbm10LmVzL3Bkcy9Q
+RFNfZXMucGRmEwJlczAtFidodHRwczovL3d3dy5jZXJ0LmZubXQuZXMvcGRzL1BEU19lbi5wZGYT
+AmVuMAsGBgQAjkYBAwIBDzAfBgNVHSMEGDAWgBTcUJaf1zGJyRHk75Zf9l+CUkZiUzCB4QYDVR0f
+BIHZMIHWMIHToIHQoIHNhoGdbGRhcDovL2xkYXByZXAuY2VydC5mbm10LmVzL0NOPUNSTDIzMzQs
+T1U9QUMlMjBSZXByZXNlbnRhY2lvbixPVT1DRVJFUyxPPUZOTVQtUkNNLEM9RVM/Y2VydGlmaWNh
+dGVSZXZvY2F0aW9uTGlzdDtiaW5hcnk/YmFzZT9vYmplY3RjbGFzcz1jUkxEaXN0cmlidXRpb25Q
+b2ludIYraHR0cDovL3d3dy5jZXJ0LmZubXQuZXMvY3Jsc3JlcC9DUkwyMzM0LmNybDANBgkqhkiG
+9w0BAQsFAAOCAQEAhzWRqP4/6dvoejDo3dln9KXPJ7TRyyLQXZQmWjo71YrHsevqr6MfLsYjG3cW
+xS4cUsODyjxj8lhCY/ubeDnp+pGS/jON3C0I2k7NiInixm5IyTmLf1w68Q89UtkaQeUZ2fvdLx9U
+4j+vmIcNBotp83N9aTf75n+CiE2jfIWPp0YZ3WCUTj8iBn7xgTEuiskyPa/LWcEYjGXCLxst+Jfo
+VjNkJq6vknscrBW/BL/k5WP/4ftuyJpRsZzMLwvd35C8Rrxr2e535sAHczJYP0WxpSIlCsx8YMqa
+qQ11NHdYg4xG5JkFS/jTz5qeGiluhzZqD0y9sWh/xoNA8bn16uWPCQ==</ds:x509certificate>
+      </ds:x509data>
+    </ds:keyinfo>
+  </ds:signature>
+</corpme-floti-facturacion>

@@ -1614,7 +1614,14 @@ async function processCorpmeFlotiFacturacion(xmlData, res) {
     // Se convierte el objeto JavaScript de vuelta a formato XML
     const xmlString = builder.buildObject(xmlData);
 
-    fs.writeFile(`./xml_recibidos/respuestaFacturacion${Date.now()}.xml`, xmlString, (err) => {
+    // Generar el nombre del archivo en formato YYYY_MM_DD_Facturacion.xml
+    const now = new Date();
+    const year = now.getFullYear();
+    const month = String(now.getMonth() + 1).padStart(2, '0'); // Mes en formato 2 dígitos
+    const day = String(now.getDate()).padStart(2, '0'); // Día en formato 2 dígitos
+    const fileName = `${year}_${month}_${day}_Facturacion.xml`;
+
+    fs.writeFile(`./xml_facturas_recibidas/${fileName}`, xmlString, (err) => {
         if (err) {
             console.error('Error al guardar el archivo XML:', err);
             res.status(500).send('Error al guardar el archivo XML');

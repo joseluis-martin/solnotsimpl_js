@@ -25,6 +25,7 @@ const instance = axios.create({
     httpsAgent: new https.Agent({  
         rejectUnauthorized: false // Desactiva la validación de certificados
     }),
+    retry: 0, // Sin reintentos
     timeout: 10000  // Timeout de 5000 ms (5 segundos)
 });
 

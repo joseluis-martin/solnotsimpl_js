@@ -388,7 +388,17 @@ async function sendXMLxTitular(resultados) {
             const response = await instance(options);
             if (response.data) {
                 logAction(`Solicitud lanzada a ${url} x Titular y acuse recibido ok para idPeticion ${idPeticion} y version ${idVersion}`);
-                fs.writeFileSync(`./xml_recibidos/acuseRecibido_${idPeticion}_${idVersion}.xml`, response.data);
+
+                // Consulta del momento en el que se graba el acuse de recibo
+                const now = new Date();
+                const timestamp = `${now.getHours()}-${now.getMinutes()}-${now.getSeconds()}-${now.getMilliseconds()}`;
+
+                // Construcción del nombre del archivo con la marca de tiempo
+                const fileName = `./xml_recibidos/acuseRecibido_${idPeticion}_${idVersion}_${timestamp}.xml`;
+
+                //Se guarda el archivo
+                fs.writeFileSync(fileName, response.data);
+
                 const receiptXml = await xml2js.parseStringPromise(response.data);
                 handleReceipt(receiptXml, idPeticion, idVersion);
             }
@@ -460,7 +470,17 @@ async function sendXMLxIDUFIR(resultados) {
             const response = await instance(options);
             if (response.data) {
                 logAction(`Solicitud lanzada a ${url} x IDUFIR y acuse recibido ok para idPeticion ${idPeticion} y version ${idVersion}`);
-                fs.writeFileSync(`./xml_recibidos/acuseRecibido_${idPeticion}_${idVersion}.xml`, response.data);
+
+                // Consulta del momento en el que se graba el acuse de recibo
+                const now = new Date();
+                const timestamp = `${now.getHours()}-${now.getMinutes()}-${now.getSeconds()}-${now.getMilliseconds()}`;
+
+                // Construcción del nombre del archivo con la marca de tiempo
+                const fileName = `./xml_recibidos/acuseRecibido_${idPeticion}_${idVersion}_${timestamp}.xml`;
+
+                //Se guarda el archivo
+                fs.writeFileSync(fileName, response.data);
+
                 const receiptXml = await xml2js.parseStringPromise(response.data);
                 handleReceipt(receiptXml, idPeticion, idVersion);
             }
@@ -552,7 +572,17 @@ async function sendXMLxFinca(resultados) {
             const response = await instance(options);
             if (response.data) {
                 logAction(`Solicitud lanzada a ${url} x Finca y acuse recibido ok para idPeticion ${idPeticion} y version ${idVersion}`);
-                fs.writeFileSync(`./xml_recibidos/acuseRecibido_${idPeticion}_${idVersion}.xml`, response.data);
+                
+                // Consulta del momento en el que se graba el acuse de recibo
+                const now = new Date();
+                const timestamp = `${now.getHours()}-${now.getMinutes()}-${now.getSeconds()}-${now.getMilliseconds()}`;
+
+                // Construcción del nombre del archivo con la marca de tiempo
+                const fileName = `./xml_recibidos/acuseRecibido_${idPeticion}_${idVersion}_${timestamp}.xml`;
+
+                //Se guarda el archivo
+                fs.writeFileSync(fileName, response.data);
+
                 const receiptXml = await xml2js.parseStringPromise(response.data);
                 handleReceipt(receiptXml, idPeticion, idVersion);
             }
@@ -1619,7 +1649,7 @@ async function processCorpmeFlotiFacturacion(xmlData, res) {
     const year = now.getFullYear();
     const month = String(now.getMonth() + 1).padStart(2, '0'); // Mes en formato 2 dígitos
     const day = String(now.getDate()).padStart(2, '0'); // Día en formato 2 dígitos
-    const fileName = `${year}_${month}_${day}_Facturacion.xml`;
+    const fileName = `GTREGAPP_${year}_${month}_${day}.xml`;
 
     fs.writeFile(`./xml_facturas_recibidas/${fileName}`, xmlString, (err) => {
         if (err) {

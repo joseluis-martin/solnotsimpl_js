@@ -632,9 +632,65 @@ async function sendXMLReenvio(resultados) {
             const response = await instance(options);
             if (response.data) {
                 logAction(`Solicitud de reenvío lanzada a ${url} y acuse recibido ok para idPeticion ${idPeticion} y version ${idVersion}`);
-                fs.writeFileSync(`./xml_recibidos/acuseRecibido_${idPeticion}}_${idVersion}.xml`, response.data);
+                fs.writeFileSync(`./xml_recibidos/acuseRecibido_${idPeticion}_${idVersion}.xml`, response.data);
                 const receiptXml = await xml2js.parseStringPromise(response.data);
-                processReenvíoCorpmeFloti(receiptXml, idPeticion, idVersion); // Los acuses de recibo del reenvío pueden ser directamente la nota simple.
+                // Los acuses de recibo del reenvío pueden ser directamente la nota simple y, en ese caso llevan nodo respuesta
+                if (receiptXml && receiptXml['corpme-floti'] && receiptXml['corpme-floti'].respuesta && receiptXml['corpme-floti'].respuesta.length > 0) {
+                    await processReenvioCorpmeFloti(receiptXml, idPeticion, idVersion);
+                }
+                // Si no existe "respuesta" pero sí existe el nodo "error", se procesa como error
+                else if ( receiptXml &&  receiptXml['corpme-floti'] && receiptXml['corpme-floti'].error &&  receiptXml['corpme-floti'].error.length > 0) {
+                    const errorNode = receiptXml['corpme-floti'].error[0];
+                    const codigoError = errorNode['$'] && errorNode['$'].codigo ? errorNode['$'].codigo : null;
+                    const errorText = errorNode['_'] || 'Sin información adicional';
+
+                    const xmlStringError = builder.buildObject(receiptXml);
+                    try {
+
+                        await sql.connect(config);
+                        const queryUpdateXml = `UPDATE peticiones SET xml_respuesta = @xmlRespuesta  WHERE idCorpme = @idCorpme AND idPeticion = @idPeticion AND idVersion = @idVersion`;
+                        const requestUpdateXml = new sql.Request();
+                        requestUpdateXml.input('xmlRespuesta', sql.NVarChar(sql.MAX), xmlStringError);
+                        requestUpdateXml.input('idCorpme', sql.VarChar(50), idCorpme);
+                        requestUpdateXml.input('idPeticion', sql.Int, idPeticion);
+                        requestUpdateXml.input('idVersion', sql.SmallInt, idVersion);
+                        await requestUpdateXml.query(queryUpdateXml);
+
+                    
+                        // Actualizar la petición asignando el estado 7 y registrando el código de error
+                        const query = `UPDATE peticiones SET IdEstado = 7, idRespuesta = @codigoError WHERE idCorpme = @idCorpme AND idPeticion = @idPeticion AND idVersion = @idVersion`;
+                        const request = new sql.Request();
+                        request.input('codigoError', sql.Int, codigoError);
+                        request.input('idCorpme', sql.VarChar(50), idCorpme);
+                        request.input('idPeticion',sql.Int, idPeticion);
+                        request.input('idVersion', sql.SmallInt, idVersion);
+                        await request.query(query);
+
+                        // Registrar en la tabla de historial utilizando el texto del error como comentario
+                        const comentario = errorText;
+                        const idUsuario = "CORPME";
+                        const idEstado = 7;
+                        const queryHistoria = `
+                            EXEC notassimples.peticiones_historia_new
+                                @idPeticion,
+                                @idVersion,
+                                @idUsuario,
+                                @idEstado,
+                                @comentario
+                        `;
+                        const requestHistoria = new sql.Request();
+                        requestHistoria.input('idPeticion', sql.Int, idPeticion);
+                        requestHistoria.input('idVersion', sql.SmallInt, idVersion);
+                        requestHistoria.input('idUsuario', sql.VarChar(20), idUsuario);
+                        requestHistoria.input('idEstado', sql.TinyInt, idEstado);
+                        requestHistoria.input('comentario', sql.NVarChar(sql.MAX), comentario);
+                        await requestHistoria.query(queryHistoria);
+                        logAction(`Recibida respuesta de error para solicitud de reenvío: idCorpme: ${idCorpme}, idPeticion: ${idPeticion} e idVersion: ${idVersion}. ${comentario}`);
+                    } catch (err) {
+                        console.error('(Reenvio) Error al procesar el error en el XML:', err);
+                        logAction(`(Reenvio) Error al procesar el error en el XML: ${err}`);
+                    }
+                }
             }
         } catch (error) {
             if (error.code === 'ECONNABORTED') {
@@ -764,7 +820,7 @@ async function handleReceipt(receipt, idPeticion, idVersion) {
 }
 
 // Función para procesar el XML de respuesta a una solicitud de reenvío
-async function processReenvíoCorpmeFloti(xmlData, idPeticion, idVersion) {
+async function processReenvioCorpmeFloti(xmlData, idPeticion, idVersion) {
     const corpmeFloti = xmlData['corpme-floti'];
     if (corpmeFloti && corpmeFloti.respuesta && corpmeFloti.respuesta.length > 0) {
         const respuesta = corpmeFloti.respuesta[0];
@@ -1650,7 +1706,7 @@ async function processCorpmeFlotiFacturacion(xmlData, res) {
     const year = now.getFullYear();
     const month = String(now.getMonth() + 1).padStart(2, '0'); // Mes en formato 2 dígitos
     const day = String(now.getDate()).padStart(2, '0'); // Día en formato 2 dígitos
-    const fileName = `GTREGAPP_${year}_${month}_${day}.xml`;
+    const fileName = `GTREGAPP_${year}_${month}_${day}_${now}.xml`;
 
     fs.writeFile(`./xml_facturas_recibidas/${fileName}`, xmlString, (err) => {
         if (err) {
@@ -1663,6 +1719,12 @@ async function processCorpmeFlotiFacturacion(xmlData, res) {
     });
 
     if (facturacionData) {
+
+        // Leer y enviar XML de confirmación. Lo pogo aquí para evita rposibles problemas con el Timeout se Regitradores 
+        const confirmacionXml = fs.readFileSync(path.join(__dirname, 'xml/corpme_floti_ok_fact.xml'), 'utf8');
+        res.set('Content-Type', 'text/xml');
+        res.send(confirmacionXml);
+
         // Extraer datos principales de facturación
         const idFactura = facturacion.$['id'];
         const idUsuario = facturacionData.$['id'];
@@ -1765,8 +1827,8 @@ async function processCorpmeFlotiFacturacion(xmlData, res) {
                             
                     // Insertar datos en la tabla facturacion_emisor
                     const emisorQuery = `
-                    INSERT INTO facturacion_emisor (factura_idTabla, emisor_codigoRegistro, emisor_nombreRegistro, emisor_nif, emisor_nombre, emisor_domicilio, emisor_municipio, emisor_provincia, emisor_cp, "emisor_fecha-factura", emisor_ejercicio, emisor_serie, emisor_numero, "emisor_regimen-caja") 
-                    VALUES (@factura_idTabla, @codigo_registro, @descripcion_emplazamiento, @nif, @nombre, @domicilio, @municipio, @provincia, @cp, @fecha_factura, @ejercicio, @serie, @numero, @regimen_caja);`;
+                    INSERT INTO facturacion_emisor (factura_idTabla, emisor_codigoRegistro, emisor_nombreRegistro, emisor_nif, emisor_nombre, emisor_domicilio, emisor_municipio, emisor_provincia, emisor_cp, emisor_base, emisor_impuesto, emisor_irpf, "emisor_fecha-factura", emisor_ejercicio, emisor_serie, emisor_numero, "emisor_regimen-caja") 
+                    VALUES (@factura_idTabla, @codigo_registro, @descripcion_emplazamiento, @nif, @nombre, @domicilio, @municipio, @provincia, @cp, @emisor_base, @emisor_impuesto, @emisor_irpf, @fecha_factura, @ejercicio, @serie, @numero, @regimen_caja);`;
                     const requestEmisor = new sql.Request();
                     requestEmisor.input('factura_idTabla', sql.Int, IdTabla); // facturaId debe ser el ID autoincremental de la factura
                     requestEmisor.input('codigo_registro', sql.Int, codigoRegistro);
@@ -1777,6 +1839,9 @@ async function processCorpmeFlotiFacturacion(xmlData, res) {
                     requestEmisor.input('municipio', sql.VarChar(250), emisorMunicipio);
                     requestEmisor.input('provincia', sql.VarChar(50), emisorProvincia);
                     requestEmisor.input('cp', sql.VarChar(5), emisorCp);
+                    requestEmisor.input('emisor_base', sql.Money, parseFloat(peticionBase));
+                    requestEmisor.input('emisor_impuesto', sql.Money, parseFloat(peticionImpuesto));
+                    requestEmisor.input('emisor_irpf', sql.Money, parseFloat(peticionIrpf));
                     requestEmisor.input('fecha_factura', sql.SmallDateTime, fechaFactura);
                     requestEmisor.input('ejercicio', sql.Int, ejercicio);
                     requestEmisor.input('serie', sql.VarChar(10), serie);
@@ -1784,7 +1849,7 @@ async function processCorpmeFlotiFacturacion(xmlData, res) {
                     requestEmisor.input('regimen_caja', sql.Int, regimenCaja);
 
                     await requestEmisor.query(emisorQuery);
-                    logAction(`Registro agregado a facturacion_emisor: factura_idTabla=${IdTabla}, codigoRegistro=${codigoRegistro}`);          
+                    //logAction(`Registro agregado a facturacion_emisor: factura_idTabla=${IdTabla}, codigoRegistro=${codigoRegistro}`);          
                         
                 }
 
@@ -1806,15 +1871,12 @@ async function processCorpmeFlotiFacturacion(xmlData, res) {
                         const referencia = peticion.$['referencia'];
             
                         // Insertar datos en la tabla facturación_peticion
-                        const peticionQuery = `INSERT INTO facturacion_peticion (factura_idTabla, emisor_codigoRegistro, emisor_nif, peticion_base, peticion_impuesto, peticion_irpf, peticion_idCorpme, "peticion_fecha-peticion", "peticion_fecha-respuesta","peticion_importe-base","peticion_porcentaje-impuesto", peticion_referencia) 
-                        VALUES (@factura_idTabla, @emisor_codigoRegistro, @emisor_nif, @peticion_base, @peticion_impuesto, @peticion_irpf, @id_peticion, @fecha, @fecha_respuesta, @importe_base, @porcentaje_impuesto, @referencia);`;
+                        const peticionQuery = `INSERT INTO facturacion_peticion (factura_idTabla, emisor_codigoRegistro, emisor_nif, peticion_idCorpme, "peticion_fecha-peticion", "peticion_fecha-respuesta","peticion_importe-base","peticion_porcentaje-impuesto", peticion_referencia) 
+                        VALUES (@factura_idTabla, @emisor_codigoRegistro, @emisor_nif, @id_peticion, @fecha, @fecha_respuesta, @importe_base, @porcentaje_impuesto, @referencia);`;
                         const requestPeticion = new sql.Request();
                         requestPeticion.input('factura_idTabla', sql.Int,  IdTabla);
                         requestPeticion.input('emisor_codigoRegistro', sql.Int, codigoRegistro);
                         requestPeticion.input('emisor_nif', sql.VarChar(20), emisorNif);
-                        requestPeticion.input('peticion_base', sql.Money, parseFloat(peticionBase));
-                        requestPeticion.input('peticion_impuesto', sql.Money, parseFloat(peticionImpuesto));
-                        requestPeticion.input('peticion_irpf', sql.Money, parseFloat(peticionIrpf));
                         requestPeticion.input('id_peticion', sql.VarChar(50), idPeticion);
                         requestPeticion.input('fecha', sql.SmallDateTime, new Date(fecha));
                         requestPeticion.input('fecha_respuesta', sql.SmallDateTime, new Date(fechaRespuesta));
@@ -1823,16 +1885,16 @@ async function processCorpmeFlotiFacturacion(xmlData, res) {
                         requestPeticion.input('referencia', sql.VarChar(50), referencia);
 
                         await requestPeticion.query(peticionQuery);
-                        logAction(`Información de facturación almacenada factura_id: ${IdTabla}`);
+                        //logAction(`Información de facturación almacenada factura_id: ${IdTabla}`);
                     }
                 }
             }
 
-            // Leer y enviar XML de confirmación
-            const confirmacionXml = fs.readFileSync(path.join(__dirname, 'xml/corpme_floti_ok_fact.xml'), 'utf8');
-            res.set('Content-Type', 'text/xml');
-            res.send(confirmacionXml);
-
+            // Leer y enviar XML de confirmación LO ADELANTO PARA QUE NO HAYA PROBLEMAS CON EL TIMEOUT
+            //const confirmacionXml = fs.readFileSync(path.join(__dirname, 'xml/corpme_floti_ok_fact.xml'), 'utf8');
+            //res.set('Content-Type', 'text/xml');
+            //res.send(confirmacionXml);
+            logAction(`Información de facturación almacenada factura_id: ${IdTabla}`);
         } catch (err) {
             console.error('Error al guardar en la base de datos:', err);
             logAction(`Error al guardar los datos de facturación en la base de datos`);

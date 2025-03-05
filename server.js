@@ -1706,7 +1706,8 @@ async function processCorpmeFlotiFacturacion(xmlData, res) {
     const year = now.getFullYear();
     const month = String(now.getMonth() + 1).padStart(2, '0'); // Mes en formato 2 dígitos
     const day = String(now.getDate()).padStart(2, '0'); // Día en formato 2 dígitos
-    const fileName = `GTREGAPP_${year}_${month}_${day}_${now}.xml`;
+    const seconds = String(now.getSeconds()).padStart(2, '0');
+    const fileName = `GTREGAPP_${year}_${month}_${day}_${seconds}.xml`;
 
     fs.writeFile(`./xml_facturas_recibidas/${fileName}`, xmlString, (err) => {
         if (err) {

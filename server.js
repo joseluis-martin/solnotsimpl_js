@@ -1735,8 +1735,10 @@ async function processCorpmeFlotiFacturacion(xmlData, res) {
         const periodoFin = facturacionData.$['periodo-fin'];
 
         try {
+
+            let pool;
             // Conexión a la base de datos
-            await sql.connect(config);
+            pool = await sql.connect(config);
 
             // Insertar datos en la tabla facturación_factura
             const facturaQuery = `INSERT INTO facturacion_factura ("factura_idFactura", "factura_idUsuario", "factura_importe-base", "factura_importe-impuesto", "factura_periodo-inicio", "factura_periodo-fin")
@@ -1901,6 +1903,10 @@ async function processCorpmeFlotiFacturacion(xmlData, res) {
             logAction(`Error al guardar los datos de facturación en la base de datos`);
             res.status(500).send('Error al guardar los datos de facturación en la base de datos');
             return;
+        } finally {
+            if (pool) {
+                pool.close(); // O sql.close() dependiendo de la librería
+            }
         }
     } else {
         res.status(400).send('Formato de XML inválido o datos faltantes');

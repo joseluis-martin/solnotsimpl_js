@@ -1734,9 +1734,11 @@ async function processCorpmeFlotiFacturacion(xmlData, res) {
         const periodoInicio = facturacionData.$['periodo-inicio'];
         const periodoFin = facturacionData.$['periodo-fin'];
 
+        let pool;
+        
         try {
 
-            let pool;
+            
             // Conexión a la base de datos
             pool = await sql.connect(config);
 

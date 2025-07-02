@@ -1735,7 +1735,7 @@ async function processCorpmeFlotiFacturacion(xmlData, res) {
         const periodoFin = facturacionData.$['periodo-fin'];
 
         let pool;
-        
+
         try {
 
             
@@ -1746,7 +1746,7 @@ async function processCorpmeFlotiFacturacion(xmlData, res) {
             const facturaQuery = `INSERT INTO facturacion_factura ("factura_idFactura", "factura_idUsuario", "factura_importe-base", "factura_importe-impuesto", "factura_periodo-inicio", "factura_periodo-fin")
                                 OUTPUT INSERTED.factura_idTabla 
                                 VALUES (@id_factura, @id_usuario, @importe_base, @importe_impuesto, @periodo_inicio, @periodo_fin);`;
-            const requestFactura = new sql.Request();
+            const requestFactura = pool.request();
             requestFactura.input('id_factura', sql.VarChar(50), idFactura);
             requestFactura.input('id_usuario', sql.VarChar(50), idUsuario);
             requestFactura.input('importe_base', sql.Money, parseFloat(importeBase));
@@ -1804,7 +1804,7 @@ async function processCorpmeFlotiFacturacion(xmlData, res) {
                         WHERE NIFEmisor = @emisor_nif 
                         GROUP BY CodigoRegistro 
                         HAVING COUNT(*) = 1;`;
-                    const requestCodigo = new sql.Request();
+                    const requestCodigo = pool.request();
                     requestCodigo.input('emisor_nif', sql.VarChar(20), emisorNif);
 
                     const resultCodigo = await requestCodigo.query(codigoRegistroQuery);
@@ -1816,7 +1816,7 @@ async function processCorpmeFlotiFacturacion(xmlData, res) {
                             SELECT Descripcion 
                             FROM registros_emplazamiento 
                             WHERE CodigoRegistro = @codigo_registro;`;
-                        const requestDescripcion = new sql.Request();
+                        const requestDescripcion = pool.request();
                         requestDescripcion.input('codigo_registro', sql.Int, codigoRegistro);
 
                         const resultDescripcion = await requestDescripcion.query(descripcionQuery);
@@ -1834,7 +1834,7 @@ async function processCorpmeFlotiFacturacion(xmlData, res) {
                     const emisorQuery = `
                     INSERT INTO facturacion_emisor (factura_idTabla, emisor_codigoRegistro, emisor_nombreRegistro, emisor_nif, emisor_nombre, emisor_domicilio, emisor_municipio, emisor_provincia, emisor_cp, emisor_base, emisor_impuesto, emisor_irpf, "emisor_fecha-factura", emisor_ejercicio, emisor_serie, emisor_numero, "emisor_regimen-caja") 
                     VALUES (@factura_idTabla, @codigo_registro, @descripcion_emplazamiento, @nif, @nombre, @domicilio, @municipio, @provincia, @cp, @emisor_base, @emisor_impuesto, @emisor_irpf, @fecha_factura, @ejercicio, @serie, @numero, @regimen_caja);`;
-                    const requestEmisor = new sql.Request();
+                    const requestEmisor  = pool.request();
                     requestEmisor.input('factura_idTabla', sql.Int, IdTabla); // facturaId debe ser el ID autoincremental de la factura
                     requestEmisor.input('codigo_registro', sql.Int, codigoRegistro);
                     requestEmisor.input('descripcion_emplazamiento', sql.VarChar(250), descripcionEmplazamiento);
@@ -1878,7 +1878,7 @@ async function processCorpmeFlotiFacturacion(xmlData, res) {
                         // Insertar datos en la tabla facturación_peticion
                         const peticionQuery = `INSERT INTO facturacion_peticion (factura_idTabla, emisor_codigoRegistro, emisor_nif, peticion_idCorpme, "peticion_fecha-peticion", "peticion_fecha-respuesta","peticion_importe-base","peticion_porcentaje-impuesto", peticion_referencia) 
                         VALUES (@factura_idTabla, @emisor_codigoRegistro, @emisor_nif, @id_peticion, @fecha, @fecha_respuesta, @importe_base, @porcentaje_impuesto, @referencia);`;
-                        const requestPeticion = new sql.Request();
+                        const requestPeticion  = pool.request();
                         requestPeticion.input('factura_idTabla', sql.Int,  IdTabla);
                         requestPeticion.input('emisor_codigoRegistro', sql.Int, codigoRegistro);
                         requestPeticion.input('emisor_nif', sql.VarChar(20), emisorNif);
@@ -1907,7 +1907,7 @@ async function processCorpmeFlotiFacturacion(xmlData, res) {
             return;
         } finally {
             if (pool) {
-                pool.close(); // O sql.close() dependiendo de la librería
+                await pool.close(); 
             }
         }
     } else {

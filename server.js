@@ -2,6 +2,7 @@ const express = require('express');
 const https = require('https');
 // const http = require('http');
 const fs = require('fs');
+const fsp = require('fs').promises;
 const path = require('path');
 const multer = require('multer');
 const xml2js = require('xml2js');
@@ -26,7 +27,7 @@ const instance = axios.create({
         rejectUnauthorized: false // Desactiva la validación de certificados
     }),
     retry: 0, // Sin reintentos
-    timeout: 10000  // Timeout de 5000 ms (5 segundos)
+    timeout: 15000  // Timeout de 5000 ms (5 segundos)
 });
 
 const CREDENCIALES = {
@@ -42,7 +43,7 @@ app.use(express.json());
 app.use(xmlparser());
 
 // Servir archivos estáticos (HTML, CSS, JS, etc.)
-app.use(express.static('public'));
+app.use(express.static('public')); 
 
 // Configuración para acceder a la BBDD de tasadores
 const config = {
@@ -1693,228 +1694,420 @@ async function processCorpmeFloti(xmlData, res) {
     }
 }
 
- // Función para procesar el XML de tipo 'corpme-floti-facturacion'
-async function processCorpmeFlotiFacturacion(xmlData, res) {
-    const facturacion = xmlData['corpme-floti-facturacion'];
-    const facturacionData = facturacion.facturacion ? facturacion.facturacion[0] : null;
+ // Función para procesar el XML de tipo 'corpme-floti-facturacion' según recibe los datos
+// async function processCorpmeFlotiFacturacion(xmlData, res) {
+//     const facturacion = xmlData['corpme-floti-facturacion'];
+//     const facturacionData = facturacion.facturacion ? facturacion.facturacion[0] : null;
 
-    // Se convierte el objeto JavaScript de vuelta a formato XML
+//     // Se convierte el objeto JavaScript de vuelta a formato XML
+//     const xmlString = builder.buildObject(xmlData);
+
+//     // Generar el nombre del archivo en formato YYYY_MM_DD_Facturacion.xml
+//     const now = new Date();
+//     const year = now.getFullYear();
+//     const month = String(now.getMonth() + 1).padStart(2, '0'); // Mes en formato 2 dígitos
+//     const day = String(now.getDate()).padStart(2, '0'); // Día en formato 2 dígitos
+//     const seconds = String(now.getSeconds()).padStart(2, '0');
+//     const fileName = `GTREGAPP_${year}_${month}_${day}_${seconds}.xml`;
+
+//     fs.writeFile(`./xml_facturas_recibidas/${fileName}`, xmlString, (err) => {
+//         if (err) {
+//             console.error('Error al guardar el archivo XML:', err);
+//             res.status(500).send('Error al guardar el archivo XML');
+//             return;
+//         }
+//         console.log(`Archivo XML de facturación guardado`);
+//         logAction(`Archivo XML de facturación guardado`);
+//     });
+
+//     if (facturacionData) {
+
+//         // Leer y enviar XML de confirmación. Lo pogo aquí para evita rposibles problemas con el Timeout se Regitradores 
+//         const confirmacionXml = fs.readFileSync(path.join(__dirname, 'xml/corpme_floti_ok_fact.xml'), 'utf8');
+//         res.set('Content-Type', 'text/xml');
+//         res.send(confirmacionXml);
+
+//         // Extraer datos principales de facturación
+//         const idFactura = facturacion.$['id'];
+//         const idUsuario = facturacionData.$['id'];
+//         const importeBase = facturacionData.$['importe-base'];
+//         const importeImpuesto = facturacionData.$['importe-impuesto'];
+//         const periodoInicio = facturacionData.$['periodo-inicio'];
+//         const periodoFin = facturacionData.$['periodo-fin'];
+
+//         let pool;
+
+//         try {
+
+            
+//             // Conexión a la base de datos
+//             pool = await sql.connect(config);
+
+//             // Insertar datos en la tabla facturación_factura
+//             const facturaQuery = `INSERT INTO facturacion_factura ("factura_idFactura", "factura_idUsuario", "factura_importe-base", "factura_importe-impuesto", "factura_periodo-inicio", "factura_periodo-fin")
+//                                 OUTPUT INSERTED.factura_idTabla 
+//                                 VALUES (@id_factura, @id_usuario, @importe_base, @importe_impuesto, @periodo_inicio, @periodo_fin);`;
+//             const requestFactura = pool.request();
+//             requestFactura.input('id_factura', sql.VarChar(50), idFactura);
+//             requestFactura.input('id_usuario', sql.VarChar(50), idUsuario);
+//             requestFactura.input('importe_base', sql.Money, parseFloat(importeBase));
+//             requestFactura.input('importe_impuesto', sql.Money, parseFloat(importeImpuesto));
+//             requestFactura.input('periodo_inicio', sql.SmallDateTime, new Date(periodoInicio));
+//             requestFactura.input('periodo_fin', sql.SmallDateTime, new Date(periodoFin));
+
+//             const result = await requestFactura.query(facturaQuery);
+//             const IdTabla = result.recordset[0].factura_idTabla;
+
+//             for (let factura of facturacionData.factura) {
+
+//                 // Extraer información del nodo 'factura'
+//                 const ejercicio = factura.$['ejercicio'];
+//                 const fechaFactura = factura.$['fecha'];
+//                 const numeroFactura = factura.$['numero'];
+//                 const regimenCajaB = factura.$['regimen-caja'];
+//                 let regimenCaja = 0;
+//                 if (regimenCajaB=='true'){
+//                     regimenCaja = 1;
+//                 }
+//                 const serie = factura.$['serie'];
+
+//                 // Extraer datos del nodo 'emisor'
+//                 const emisor = factura.emisor ? factura.emisor[0].$ : {};
+//                 let emisorNif = emisor['nif'];
+//                 // Completar con ceros a la izquierda
+//                 if (emisorNif) {
+//                     emisorNif = emisorNif.padStart(9, '0');
+//                 }
+//                 let emisorCp = emisor['cp'];
+//                 // Completar con ceros a la izquierda
+//                 if (emisorCp) {
+//                     emisorCp = emisorCp.padStart(5, '0');
+//                 }
+//                 const emisorDomicilio = emisor['domicilio'];
+//                 const emisorMunicipio = emisor['municipio'];
+//                 const emisorNombre = emisor['nombre'];
+//                 const emisorProvincia = emisor['provincia'];
+
+//                 // Extraer datos del nodo 'importe'
+//                 const importe = factura.importe ? factura.importe[0].$ : {};
+//                 const peticionBase = importe['base'];
+//                 const peticionImpuesto = importe['impuesto'];
+//                 const peticionIrpf = importe['irpf'];
+
+//                 // Verificar si hay un valor único en la tabla registros_emisor
+//                 let codigoRegistro = 0;
+//                 let descripcionEmplazamiento = 'No hay datos o hay más de un registro';
+
+//                 if (emisorNif) {
+//                     const codigoRegistroQuery = `
+//                         SELECT CodigoRegistro 
+//                         FROM registros_emisor 
+//                         WHERE NIFEmisor = @emisor_nif 
+//                         GROUP BY CodigoRegistro 
+//                         HAVING COUNT(*) = 1;`;
+//                     const requestCodigo = pool.request();
+//                     requestCodigo.input('emisor_nif', sql.VarChar(20), emisorNif);
+
+//                     const resultCodigo = await requestCodigo.query(codigoRegistroQuery);
+//                     if (resultCodigo.recordset.length === 1) {
+//                         codigoRegistro = resultCodigo.recordset[0].CodigoRegistro;
+
+//                         // Obtener la descripción del emplazamiento
+//                         const descripcionQuery = `
+//                             SELECT Descripcion 
+//                             FROM registros_emplazamiento 
+//                             WHERE CodigoRegistro = @codigo_registro;`;
+//                         const requestDescripcion = pool.request();
+//                         requestDescripcion.input('codigo_registro', sql.Int, codigoRegistro);
+
+//                         const resultDescripcion = await requestDescripcion.query(descripcionQuery);
+//                         if (resultDescripcion.recordset.length === 1) {
+//                             const Descrip = resultDescripcion.recordset[0].Descripcion;
+//                             descripcionEmplazamiento = `Registro de la Propiedad de ${Descrip}`;
+//                         } else {
+//                             logAction(`No se encontró una descripción única para CodigoRegistro: ${codigoRegistro}`);
+//                         }
+//                     } else {
+//                         logAction(`No se encontró un único registro para el NIF: ${emisorNif}`);
+//                     }
+                            
+//                     // Insertar datos en la tabla facturacion_emisor
+//                     const emisorQuery = `
+//                     INSERT INTO facturacion_emisor (factura_idTabla, emisor_codigoRegistro, emisor_nombreRegistro, emisor_nif, emisor_nombre, emisor_domicilio, emisor_municipio, emisor_provincia, emisor_cp, emisor_base, emisor_impuesto, emisor_irpf, "emisor_fecha-factura", emisor_ejercicio, emisor_serie, emisor_numero, "emisor_regimen-caja") 
+//                     VALUES (@factura_idTabla, @codigo_registro, @descripcion_emplazamiento, @nif, @nombre, @domicilio, @municipio, @provincia, @cp, @emisor_base, @emisor_impuesto, @emisor_irpf, @fecha_factura, @ejercicio, @serie, @numero, @regimen_caja);`;
+//                     const requestEmisor  = pool.request();
+//                     requestEmisor.input('factura_idTabla', sql.Int, IdTabla); // facturaId debe ser el ID autoincremental de la factura
+//                     requestEmisor.input('codigo_registro', sql.Int, codigoRegistro);
+//                     requestEmisor.input('descripcion_emplazamiento', sql.VarChar(250), descripcionEmplazamiento);
+//                     requestEmisor.input('nif', sql.VarChar(20), emisorNif);
+//                     requestEmisor.input('nombre', sql.VarChar(250), emisorNombre);
+//                     requestEmisor.input('domicilio', sql.VarChar(250), emisorDomicilio);
+//                     requestEmisor.input('municipio', sql.VarChar(250), emisorMunicipio);
+//                     requestEmisor.input('provincia', sql.VarChar(50), emisorProvincia);
+//                     requestEmisor.input('cp', sql.VarChar(5), emisorCp);
+//                     requestEmisor.input('emisor_base', sql.Money, parseFloat(peticionBase));
+//                     requestEmisor.input('emisor_impuesto', sql.Money, parseFloat(peticionImpuesto));
+//                     requestEmisor.input('emisor_irpf', sql.Money, parseFloat(peticionIrpf));
+//                     requestEmisor.input('fecha_factura', sql.SmallDateTime, fechaFactura);
+//                     requestEmisor.input('ejercicio', sql.Int, ejercicio);
+//                     requestEmisor.input('serie', sql.VarChar(10), serie);
+//                     requestEmisor.input('numero', sql.VarChar(5), numeroFactura);
+//                     requestEmisor.input('regimen_caja', sql.Int, regimenCaja);
+
+//                     await requestEmisor.query(emisorQuery);
+//                     //logAction(`Registro agregado a facturacion_emisor: factura_idTabla=${IdTabla}, codigoRegistro=${codigoRegistro}`);          
+                        
+//                 }
+
+//                 // Asegurarse de que 'peticion' sea un array.
+//                 const peticiones = Array.isArray(factura.peticion) ? factura.peticion : [factura.peticion];
+            
+//                 // Iterar sobre todas las peticiones en cada factura
+//                 for (let peticion of peticiones) {
+//                     if (peticion) {
+//                         // Extraer datos de la petición
+//                         // const grupo = peticion.$['grupo'];
+//                         const idPeticion = peticion.$['id'];
+//                         // const usuario = peticion.$['usuario'];
+//                         const fecha = peticion.$['fecha'];
+//                         const fechaRespuesta = peticion.$['fecha-respuesta'];
+//                         // const tipo = peticion.$['tipo'];
+//                         const importeBasePeticion = peticion.$['importe-base'];
+//                         const porcentajeImpuesto = peticion.$['porcentaje-impuesto'];
+//                         const referencia = peticion.$['referencia'];
+            
+//                         // Insertar datos en la tabla facturación_peticion
+//                         const peticionQuery = `INSERT INTO facturacion_peticion (factura_idTabla, emisor_codigoRegistro, emisor_nif, peticion_idCorpme, "peticion_fecha-peticion", "peticion_fecha-respuesta","peticion_importe-base","peticion_porcentaje-impuesto", peticion_referencia) 
+//                         VALUES (@factura_idTabla, @emisor_codigoRegistro, @emisor_nif, @id_peticion, @fecha, @fecha_respuesta, @importe_base, @porcentaje_impuesto, @referencia);`;
+//                         const requestPeticion  = pool.request();
+//                         requestPeticion.input('factura_idTabla', sql.Int,  IdTabla);
+//                         requestPeticion.input('emisor_codigoRegistro', sql.Int, codigoRegistro);
+//                         requestPeticion.input('emisor_nif', sql.VarChar(20), emisorNif);
+//                         requestPeticion.input('id_peticion', sql.VarChar(50), idPeticion);
+//                         requestPeticion.input('fecha', sql.SmallDateTime, new Date(fecha));
+//                         requestPeticion.input('fecha_respuesta', sql.SmallDateTime, new Date(fechaRespuesta));
+//                         requestPeticion.input('importe_base', sql.Money, parseFloat(importeBasePeticion));
+//                         requestPeticion.input('porcentaje_impuesto', sql.Decimal(5, 2), parseFloat(porcentajeImpuesto));
+//                         requestPeticion.input('referencia', sql.VarChar(50), referencia);
+
+//                         await requestPeticion.query(peticionQuery);
+//                         //logAction(`Información de facturación almacenada factura_id: ${IdTabla}`);
+//                     }
+//                 }
+//             }
+
+//             // Leer y enviar XML de confirmación LO ADELANTO PARA QUE NO HAYA PROBLEMAS CON EL TIMEOUT
+//             //const confirmacionXml = fs.readFileSync(path.join(__dirname, 'xml/corpme_floti_ok_fact.xml'), 'utf8');
+//             //res.set('Content-Type', 'text/xml');
+//             //res.send(confirmacionXml);
+//             logAction(`Información de facturación almacenada factura_id: ${IdTabla}`);
+//         } catch (err) {
+//             console.error('Error al guardar en la base de datos:', err);
+//             logAction(`Error al guardar los datos de facturación en la base de datos`);
+//             res.status(500).send('Error al guardar los datos de facturación en la base de datos');
+//             return;
+//         } finally {
+//             if (pool) {
+//                 await pool.close(); 
+//             }
+//         }
+//     } else {
+//         res.status(400).send('Formato de XML inválido o datos faltantes');
+//     }
+// }
+
+// Función para procesar el XML de tipo 'corpme-floti-facturacion' desde el archivo grabado
+async function processCorpmeFlotiFacturacion(xmlData, res) {
+    // Convertir el objeto JS original a string XML
     const xmlString = builder.buildObject(xmlData);
 
-    // Generar el nombre del archivo en formato YYYY_MM_DD_Facturacion.xml
+    // Generar nombre de archivo
     const now = new Date();
     const year = now.getFullYear();
-    const month = String(now.getMonth() + 1).padStart(2, '0'); // Mes en formato 2 dígitos
-    const day = String(now.getDate()).padStart(2, '0'); // Día en formato 2 dígitos
+    const month = String(now.getMonth() + 1).padStart(2, '0');
+    const day = String(now.getDate()).padStart(2, '0');
     const seconds = String(now.getSeconds()).padStart(2, '0');
     const fileName = `GTREGAPP_${year}_${month}_${day}_${seconds}.xml`;
+    const filePath = `./xml_facturas_recibidas/${fileName}`;
 
-    fs.writeFile(`./xml_facturas_recibidas/${fileName}`, xmlString, (err) => {
-        if (err) {
-            console.error('Error al guardar el archivo XML:', err);
-            res.status(500).send('Error al guardar el archivo XML');
-            return;
-        }
+    try {
+        await fsp.writeFile(filePath, xmlString, 'utf8');
         console.log(`Archivo XML de facturación guardado`);
         logAction(`Archivo XML de facturación guardado`);
-    });
+    } catch (err) {
+        console.error('Error al guardar el archivo XML:', err);
+        res.status(500).send('Error al guardar el archivo XML');
+        return;
+    }
 
-    if (facturacionData) {
+    // Leer y parsear el XML guardado
+    let parsedXml;
+    try {
+        const xmlContent = await fsp.readFile(filePath, 'utf8');
+        parsedXml = await xml2js.parseStringPromise(xmlContent);
+    } catch (err) {
+        console.error('Error al leer o parsear el archivo XML:', err);
+        res.status(500).send('Error al procesar el archivo XML guardado');
+        return;
+    }
 
-        // Leer y enviar XML de confirmación. Lo pogo aquí para evita rposibles problemas con el Timeout se Regitradores 
-        const confirmacionXml = fs.readFileSync(path.join(__dirname, 'xml/corpme_floti_ok_fact.xml'), 'utf8');
-        res.set('Content-Type', 'text/xml');
-        res.send(confirmacionXml);
+    const facturacion = parsedXml['corpme-floti-facturacion'];
+    const facturacionData = facturacion?.facturacion?.[0] ?? null;
 
-        // Extraer datos principales de facturación
-        const idFactura = facturacion.$['id'];
-        const idUsuario = facturacionData.$['id'];
-        const importeBase = facturacionData.$['importe-base'];
-        const importeImpuesto = facturacionData.$['importe-impuesto'];
-        const periodoInicio = facturacionData.$['periodo-inicio'];
-        const periodoFin = facturacionData.$['periodo-fin'];
+    if (!facturacionData) {
+        res.status(400).send('Formato de XML inválido o datos faltantes');
+        return;
+    }
 
-        let pool;
+    // Enviar confirmación inmediatamente para evitar timeout
+    const confirmacionXml = fs.readFileSync(path.join(__dirname, 'xml/corpme_floti_ok_fact.xml'), 'utf8');
+    res.set('Content-Type', 'text/xml');
+    res.send(confirmacionXml);
 
-        try {
+    const idFactura = facturacion.$['id'];
+    const idUsuario = facturacionData.$['id'];
+    const importeBase = facturacionData.$['importe-base'];
+    const importeImpuesto = facturacionData.$['importe-impuesto'];
+    const periodoInicio = facturacionData.$['periodo-inicio'];
+    const periodoFin = facturacionData.$['periodo-fin'];
 
-            
-            // Conexión a la base de datos
-            pool = await sql.connect(config);
+    let pool;
 
-            // Insertar datos en la tabla facturación_factura
-            const facturaQuery = `INSERT INTO facturacion_factura ("factura_idFactura", "factura_idUsuario", "factura_importe-base", "factura_importe-impuesto", "factura_periodo-inicio", "factura_periodo-fin")
-                                OUTPUT INSERTED.factura_idTabla 
-                                VALUES (@id_factura, @id_usuario, @importe_base, @importe_impuesto, @periodo_inicio, @periodo_fin);`;
-            const requestFactura = pool.request();
-            requestFactura.input('id_factura', sql.VarChar(50), idFactura);
-            requestFactura.input('id_usuario', sql.VarChar(50), idUsuario);
-            requestFactura.input('importe_base', sql.Money, parseFloat(importeBase));
-            requestFactura.input('importe_impuesto', sql.Money, parseFloat(importeImpuesto));
-            requestFactura.input('periodo_inicio', sql.SmallDateTime, new Date(periodoInicio));
-            requestFactura.input('periodo_fin', sql.SmallDateTime, new Date(periodoFin));
+    try {
+        pool = await sql.connect(config);
 
-            const result = await requestFactura.query(facturaQuery);
-            const IdTabla = result.recordset[0].factura_idTabla;
+        const facturaQuery = `INSERT INTO facturacion_factura ("factura_idFactura", "factura_idUsuario", "factura_importe-base", "factura_importe-impuesto", "factura_periodo-inicio", "factura_periodo-fin")
+                            OUTPUT INSERTED.factura_idTabla 
+                            VALUES (@id_factura, @id_usuario, @importe_base, @importe_impuesto, @periodo_inicio, @periodo_fin);`;
+        const requestFactura = pool.request();
+        requestFactura.input('id_factura', sql.VarChar(50), idFactura);
+        requestFactura.input('id_usuario', sql.VarChar(50), idUsuario);
+        requestFactura.input('importe_base', sql.Money, parseFloat(importeBase));
+        requestFactura.input('importe_impuesto', sql.Money, parseFloat(importeImpuesto));
+        requestFactura.input('periodo_inicio', sql.SmallDateTime, new Date(periodoInicio));
+        requestFactura.input('periodo_fin', sql.SmallDateTime, new Date(periodoFin));
 
-            for (let factura of facturacionData.factura) {
+        const result = await requestFactura.query(facturaQuery);
+        const IdTabla = result.recordset[0].factura_idTabla;
 
-                // Extraer información del nodo 'factura'
-                const ejercicio = factura.$['ejercicio'];
-                const fechaFactura = factura.$['fecha'];
-                const numeroFactura = factura.$['numero'];
-                const regimenCajaB = factura.$['regimen-caja'];
-                let regimenCaja = 0;
-                if (regimenCajaB=='true'){
-                    regimenCaja = 1;
-                }
-                const serie = factura.$['serie'];
+        for (let factura of facturacionData.factura) {
+            const ejercicio = factura.$['ejercicio'];
+            const fechaFactura = factura.$['fecha'];
+            const numeroFactura = factura.$['numero'];
+            const regimenCajaB = factura.$['regimen-caja'];
+            const serie = factura.$['serie'];
+            const regimenCaja = regimenCajaB === 'true' ? 1 : 0;
 
-                // Extraer datos del nodo 'emisor'
-                const emisor = factura.emisor ? factura.emisor[0].$ : {};
-                let emisorNif = emisor['nif'];
-                // Completar con ceros a la izquierda
-                if (emisorNif) {
-                    emisorNif = emisorNif.padStart(9, '0');
-                }
-                let emisorCp = emisor['cp'];
-                // Completar con ceros a la izquierda
-                if (emisorCp) {
-                    emisorCp = emisorCp.padStart(5, '0');
-                }
-                const emisorDomicilio = emisor['domicilio'];
-                const emisorMunicipio = emisor['municipio'];
-                const emisorNombre = emisor['nombre'];
-                const emisorProvincia = emisor['provincia'];
+            const emisor = factura.emisor?.[0]?.$ ?? {};
+            let emisorNif = emisor['nif']?.padStart(9, '0');
+            let emisorCp = emisor['cp']?.padStart(5, '0');
+            const emisorDomicilio = emisor['domicilio'];
+            const emisorMunicipio = emisor['municipio'];
+            const emisorNombre = emisor['nombre'];
+            const emisorProvincia = emisor['provincia'];
 
-                // Extraer datos del nodo 'importe'
-                const importe = factura.importe ? factura.importe[0].$ : {};
-                const peticionBase = importe['base'];
-                const peticionImpuesto = importe['impuesto'];
-                const peticionIrpf = importe['irpf'];
+            const importe = factura.importe?.[0]?.$ ?? {};
+            const peticionBase = importe['base'];
+            const peticionImpuesto = importe['impuesto'];
+            const peticionIrpf = importe['irpf'];
 
-                // Verificar si hay un valor único en la tabla registros_emisor
-                let codigoRegistro = 0;
-                let descripcionEmplazamiento = 'No hay datos o hay más de un registro';
+            let codigoRegistro = 0;
+            let descripcionEmplazamiento = 'No hay datos o hay más de un registro';
 
-                if (emisorNif) {
-                    const codigoRegistroQuery = `
-                        SELECT CodigoRegistro 
-                        FROM registros_emisor 
-                        WHERE NIFEmisor = @emisor_nif 
-                        GROUP BY CodigoRegistro 
-                        HAVING COUNT(*) = 1;`;
-                    const requestCodigo = pool.request();
-                    requestCodigo.input('emisor_nif', sql.VarChar(20), emisorNif);
+            if (emisorNif) {
+                const codigoRegistroQuery = `
+                    SELECT CodigoRegistro 
+                    FROM registros_emisor 
+                    WHERE NIFEmisor = @emisor_nif 
+                    GROUP BY CodigoRegistro 
+                    HAVING COUNT(*) = 1;`;
+                const requestCodigo = pool.request();
+                requestCodigo.input('emisor_nif', sql.VarChar(20), emisorNif);
 
-                    const resultCodigo = await requestCodigo.query(codigoRegistroQuery);
-                    if (resultCodigo.recordset.length === 1) {
-                        codigoRegistro = resultCodigo.recordset[0].CodigoRegistro;
+                const resultCodigo = await requestCodigo.query(codigoRegistroQuery);
+                if (resultCodigo.recordset.length === 1) {
+                    codigoRegistro = resultCodigo.recordset[0].CodigoRegistro;
 
-                        // Obtener la descripción del emplazamiento
-                        const descripcionQuery = `
-                            SELECT Descripcion 
-                            FROM registros_emplazamiento 
-                            WHERE CodigoRegistro = @codigo_registro;`;
-                        const requestDescripcion = pool.request();
-                        requestDescripcion.input('codigo_registro', sql.Int, codigoRegistro);
+                    const descripcionQuery = `
+                        SELECT Descripcion 
+                        FROM registros_emplazamiento 
+                        WHERE CodigoRegistro = @codigo_registro;`;
+                    const requestDescripcion = pool.request();
+                    requestDescripcion.input('codigo_registro', sql.Int, codigoRegistro);
 
-                        const resultDescripcion = await requestDescripcion.query(descripcionQuery);
-                        if (resultDescripcion.recordset.length === 1) {
-                            const Descrip = resultDescripcion.recordset[0].Descripcion;
-                            descripcionEmplazamiento = `Registro de la Propiedad de ${Descrip}`;
-                        } else {
-                            logAction(`No se encontró una descripción única para CodigoRegistro: ${codigoRegistro}`);
-                        }
+                    const resultDescripcion = await requestDescripcion.query(descripcionQuery);
+                    if (resultDescripcion.recordset.length === 1) {
+                        descripcionEmplazamiento = `Registro de la Propiedad de ${resultDescripcion.recordset[0].Descripcion}`;
                     } else {
-                        logAction(`No se encontró un único registro para el NIF: ${emisorNif}`);
+                        logAction(`No se encontró una descripción única para CodigoRegistro: ${codigoRegistro}`);
                     }
-                            
-                    // Insertar datos en la tabla facturacion_emisor
-                    const emisorQuery = `
-                    INSERT INTO facturacion_emisor (factura_idTabla, emisor_codigoRegistro, emisor_nombreRegistro, emisor_nif, emisor_nombre, emisor_domicilio, emisor_municipio, emisor_provincia, emisor_cp, emisor_base, emisor_impuesto, emisor_irpf, "emisor_fecha-factura", emisor_ejercicio, emisor_serie, emisor_numero, "emisor_regimen-caja") 
-                    VALUES (@factura_idTabla, @codigo_registro, @descripcion_emplazamiento, @nif, @nombre, @domicilio, @municipio, @provincia, @cp, @emisor_base, @emisor_impuesto, @emisor_irpf, @fecha_factura, @ejercicio, @serie, @numero, @regimen_caja);`;
-                    const requestEmisor  = pool.request();
-                    requestEmisor.input('factura_idTabla', sql.Int, IdTabla); // facturaId debe ser el ID autoincremental de la factura
-                    requestEmisor.input('codigo_registro', sql.Int, codigoRegistro);
-                    requestEmisor.input('descripcion_emplazamiento', sql.VarChar(250), descripcionEmplazamiento);
-                    requestEmisor.input('nif', sql.VarChar(20), emisorNif);
-                    requestEmisor.input('nombre', sql.VarChar(250), emisorNombre);
-                    requestEmisor.input('domicilio', sql.VarChar(250), emisorDomicilio);
-                    requestEmisor.input('municipio', sql.VarChar(250), emisorMunicipio);
-                    requestEmisor.input('provincia', sql.VarChar(50), emisorProvincia);
-                    requestEmisor.input('cp', sql.VarChar(5), emisorCp);
-                    requestEmisor.input('emisor_base', sql.Money, parseFloat(peticionBase));
-                    requestEmisor.input('emisor_impuesto', sql.Money, parseFloat(peticionImpuesto));
-                    requestEmisor.input('emisor_irpf', sql.Money, parseFloat(peticionIrpf));
-                    requestEmisor.input('fecha_factura', sql.SmallDateTime, fechaFactura);
-                    requestEmisor.input('ejercicio', sql.Int, ejercicio);
-                    requestEmisor.input('serie', sql.VarChar(10), serie);
-                    requestEmisor.input('numero', sql.VarChar(5), numeroFactura);
-                    requestEmisor.input('regimen_caja', sql.Int, regimenCaja);
-
-                    await requestEmisor.query(emisorQuery);
-                    //logAction(`Registro agregado a facturacion_emisor: factura_idTabla=${IdTabla}, codigoRegistro=${codigoRegistro}`);          
-                        
+                } else {
+                    logAction(`No se encontró un único registro para el NIF: ${emisorNif}`);
                 }
 
-                // Asegurarse de que 'peticion' sea un array.
-                const peticiones = Array.isArray(factura.peticion) ? factura.peticion : [factura.peticion];
-            
-                // Iterar sobre todas las peticiones en cada factura
-                for (let peticion of peticiones) {
-                    if (peticion) {
-                        // Extraer datos de la petición
-                        // const grupo = peticion.$['grupo'];
-                        const idPeticion = peticion.$['id'];
-                        // const usuario = peticion.$['usuario'];
-                        const fecha = peticion.$['fecha'];
-                        const fechaRespuesta = peticion.$['fecha-respuesta'];
-                        // const tipo = peticion.$['tipo'];
-                        const importeBasePeticion = peticion.$['importe-base'];
-                        const porcentajeImpuesto = peticion.$['porcentaje-impuesto'];
-                        const referencia = peticion.$['referencia'];
-            
-                        // Insertar datos en la tabla facturación_peticion
-                        const peticionQuery = `INSERT INTO facturacion_peticion (factura_idTabla, emisor_codigoRegistro, emisor_nif, peticion_idCorpme, "peticion_fecha-peticion", "peticion_fecha-respuesta","peticion_importe-base","peticion_porcentaje-impuesto", peticion_referencia) 
-                        VALUES (@factura_idTabla, @emisor_codigoRegistro, @emisor_nif, @id_peticion, @fecha, @fecha_respuesta, @importe_base, @porcentaje_impuesto, @referencia);`;
-                        const requestPeticion  = pool.request();
-                        requestPeticion.input('factura_idTabla', sql.Int,  IdTabla);
-                        requestPeticion.input('emisor_codigoRegistro', sql.Int, codigoRegistro);
-                        requestPeticion.input('emisor_nif', sql.VarChar(20), emisorNif);
-                        requestPeticion.input('id_peticion', sql.VarChar(50), idPeticion);
-                        requestPeticion.input('fecha', sql.SmallDateTime, new Date(fecha));
-                        requestPeticion.input('fecha_respuesta', sql.SmallDateTime, new Date(fechaRespuesta));
-                        requestPeticion.input('importe_base', sql.Money, parseFloat(importeBasePeticion));
-                        requestPeticion.input('porcentaje_impuesto', sql.Decimal(5, 2), parseFloat(porcentajeImpuesto));
-                        requestPeticion.input('referencia', sql.VarChar(50), referencia);
+                const emisorQuery = `
+                INSERT INTO facturacion_emisor (factura_idTabla, emisor_codigoRegistro, emisor_nombreRegistro, emisor_nif, emisor_nombre, emisor_domicilio, emisor_municipio, emisor_provincia, emisor_cp, emisor_base, emisor_impuesto, emisor_irpf, "emisor_fecha-factura", emisor_ejercicio, emisor_serie, emisor_numero, "emisor_regimen-caja") 
+                VALUES (@factura_idTabla, @codigo_registro, @descripcion_emplazamiento, @nif, @nombre, @domicilio, @municipio, @provincia, @cp, @emisor_base, @emisor_impuesto, @emisor_irpf, @fecha_factura, @ejercicio, @serie, @numero, @regimen_caja);`;
+                const requestEmisor  = pool.request();
+                requestEmisor.input('factura_idTabla', sql.Int, IdTabla);
+                requestEmisor.input('codigo_registro', sql.Int, codigoRegistro);
+                requestEmisor.input('descripcion_emplazamiento', sql.VarChar(250), descripcionEmplazamiento);
+                requestEmisor.input('nif', sql.VarChar(20), emisorNif);
+                requestEmisor.input('nombre', sql.VarChar(250), emisorNombre);
+                requestEmisor.input('domicilio', sql.VarChar(250), emisorDomicilio);
+                requestEmisor.input('municipio', sql.VarChar(250), emisorMunicipio);
+                requestEmisor.input('provincia', sql.VarChar(50), emisorProvincia);
+                requestEmisor.input('cp', sql.VarChar(5), emisorCp);
+                requestEmisor.input('emisor_base', sql.Money, parseFloat(peticionBase));
+                requestEmisor.input('emisor_impuesto', sql.Money, parseFloat(peticionImpuesto));
+                requestEmisor.input('emisor_irpf', sql.Money, parseFloat(peticionIrpf));
+                requestEmisor.input('fecha_factura', sql.SmallDateTime, fechaFactura);
+                requestEmisor.input('ejercicio', sql.Int, ejercicio);
+                requestEmisor.input('serie', sql.VarChar(10), serie);
+                requestEmisor.input('numero', sql.VarChar(5), numeroFactura);
+                requestEmisor.input('regimen_caja', sql.Int, regimenCaja);
 
-                        await requestPeticion.query(peticionQuery);
-                        //logAction(`Información de facturación almacenada factura_id: ${IdTabla}`);
-                    }
-                }
+                await requestEmisor.query(emisorQuery);
             }
 
-            // Leer y enviar XML de confirmación LO ADELANTO PARA QUE NO HAYA PROBLEMAS CON EL TIMEOUT
-            //const confirmacionXml = fs.readFileSync(path.join(__dirname, 'xml/corpme_floti_ok_fact.xml'), 'utf8');
-            //res.set('Content-Type', 'text/xml');
-            //res.send(confirmacionXml);
-            logAction(`Información de facturación almacenada factura_id: ${IdTabla}`);
-        } catch (err) {
-            console.error('Error al guardar en la base de datos:', err);
-            logAction(`Error al guardar los datos de facturación en la base de datos`);
-            res.status(500).send('Error al guardar los datos de facturación en la base de datos');
-            return;
-        } finally {
-            if (pool) {
-                await pool.close(); 
+            const peticiones = Array.isArray(factura.peticion) ? factura.peticion : [factura.peticion];
+
+            for (let peticion of peticiones) {
+                if (!peticion) continue;
+
+                const idPeticion = peticion.$['id'];
+                const fecha = peticion.$['fecha'];
+                const fechaRespuesta = peticion.$['fecha-respuesta'];
+                const importeBasePeticion = peticion.$['importe-base'];
+                const porcentajeImpuesto = peticion.$['porcentaje-impuesto'];
+                const referencia = peticion.$['referencia'];
+
+                const peticionQuery = `INSERT INTO facturacion_peticion (factura_idTabla, emisor_codigoRegistro, emisor_nif, peticion_idCorpme, "peticion_fecha-peticion", "peticion_fecha-respuesta","peticion_importe-base","peticion_porcentaje-impuesto", peticion_referencia) 
+                VALUES (@factura_idTabla, @emisor_codigoRegistro, @emisor_nif, @id_peticion, @fecha, @fecha_respuesta, @importe_base, @porcentaje_impuesto, @referencia);`;
+                const requestPeticion  = pool.request();
+                requestPeticion.input('factura_idTabla', sql.Int,  IdTabla);
+                requestPeticion.input('emisor_codigoRegistro', sql.Int, codigoRegistro);
+                requestPeticion.input('emisor_nif', sql.VarChar(20), emisorNif);
+                requestPeticion.input('id_peticion', sql.VarChar(50), idPeticion);
+                requestPeticion.input('fecha', sql.SmallDateTime, new Date(fecha));
+                requestPeticion.input('fecha_respuesta', sql.SmallDateTime, new Date(fechaRespuesta));
+                requestPeticion.input('importe_base', sql.Money, parseFloat(importeBasePeticion));
+                requestPeticion.input('porcentaje_impuesto', sql.Decimal(5, 2), parseFloat(porcentajeImpuesto));
+                requestPeticion.input('referencia', sql.VarChar(50), referencia);
+
+                await requestPeticion.query(peticionQuery);
             }
         }
-    } else {
-        res.status(400).send('Formato de XML inválido o datos faltantes');
+
+        logAction(`Información de facturación almacenada factura_id: ${IdTabla}`);
+    } catch (err) {
+        console.error('Error al guardar en la base de datos:', err);
+        logAction(`Error al guardar los datos de facturación en la base de datos`);
+        res.status(500).send('Error al guardar los datos de facturación en la base de datos');
+    } finally {
+        if (pool) await pool.close();
     }
 }
-
 
 // Opciones de HTTPS incluyendo el archivo .pfx y la contraseña
 const credentials = {

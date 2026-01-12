@@ -125,18 +125,18 @@ En el directorio raíz del proyecto, crea un archivo llamado `.env` y agrega las
    ```
    # Credenciales de base de datos
    DB_USER=notassimples
-   DB_PASSWORD=akdsuTR54%
+   DB_PASSWORD=************
    DB_SERVER=gt_sqlserver.gtasvalor.tasvalor.com
    DB_PORT=1433
-   DB_DATABASE=tasadores
+   DB_DATABASE=**********
 
    # Certificados SSL
    SSL_PFX_PATH=./Certificado_SSL/2024/certificate.pfx
-   SSL_PFX_PASSWORD=M4s72aKalo
+   SSL_PFX_PASSWORD=*******
 
    # Acceso a la web de administración
-   ADMIN_USERNAME=jptrujillo@tasvalor.com
-   ADMIN_PASSWORD=jp1.%mar
+   ADMIN_USERNAME=********
+   ADMIN_PASSWORD=******
 
    # Configuración de servidor
    PORT=5999

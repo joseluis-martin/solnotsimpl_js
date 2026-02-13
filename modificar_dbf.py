@@ -16,7 +16,7 @@ def main():
 
     IM_ANO_CLA  = str(sys.argv[1])
     IM_NUM_TAS  = str(sys.argv[2])
-    IM_SUP_TAS  = sys.argv[3]          # Se convierte a numérico más abajo si hace falta
+    IM_SUP_TAS  = sys.argv[3]          
     IMAGEN      = sys.argv[4]
     new_dbf_file = sys.argv[5]
 
@@ -38,18 +38,18 @@ def main():
     new_table = None
 
     try:
-        # ── Abrir tabla original SIN with (evita el doble open que causaba el bug) ──
+        #  Abrir tabla original 
         table = dbf.Table(dbf_file)
         table.open(dbf.READ_ONLY)
 
         # Limpiar la especificación de campos
         field_specs = [f.replace(' NULL', '') for f in table.structure()]
 
-        # ── Crear y abrir la nueva tabla ──────────────────────────────────────
+        #  Crear y abrir la nueva tabla 
         new_table = dbf.Table(new_dbf_file_path, ';'.join(field_specs), dbf_type='vfp')
         new_table.open(dbf.READ_WRITE)
 
-        # ── Copiar registros modificando los campos deseados ──────────────────
+        # Copiar registros modificando los campos deseados 
         for record in table:
             new_table.append()
             with new_table[-1] as rec:

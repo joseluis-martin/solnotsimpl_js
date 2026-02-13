@@ -97,7 +97,7 @@ async function modificarDBFConPython(idPeticion, idVersion) {
         //console.log(IM_ANO_CLA, IM_NUM_TAS, IM_SUP_TAS, IMAGEN, idDocumento);
 
         // Llamar al script Python y pasar los argumentos
-        exec(`python modificar_dbf.py ${IM_ANO_CLA} ${IM_NUM_TAS} ${IM_SUP_TAS} ${IMAGEN} ${NombreArchivoDoc}`, 
+        exec(`python3 modificar_dbf.py ${IM_ANO_CLA} ${IM_NUM_TAS} ${IM_SUP_TAS} ${IMAGEN} ${NombreArchivoDoc}`, 
             (error, stdout, stderr) => {
             if (error) {
                 console.error(`Error al ejecutar el script de Python: ${error.message}`);

@@ -3,70 +3,107 @@ import dbf
 import os
 import shutil
 
-# python3 modificar_dbf.py 2024 306233 24 Nota_Simple_9_1_Z16TZ16T.pdf 9.dbf
+# ─── Validación de argumentos (esto no deberia fallar)
+def validar_argumentos():
+    if len(sys.argv) < 6:
+        print("Uso:     python3 modificar_dbf.py AÑO NUM_TAS SUP_TAS IMAGEN archivo.dbf")
+        print("Ejemplo: python3 modificar_dbf.py 2024 306233 24 Nota_Simple.pdf 9.dbf")
+        sys.exit(1)
 
-# Obtener los argumentos desde la línea de comandos
-IM_ANO_CLA = str(sys.argv[1])
-IM_NUM_TAS = str(sys.argv[2])
-IM_SUP_TAS = str(sys.argv[3])
-IMAGEN = sys.argv[4]
-new_dbf_file = sys.argv[5]
+# ─── Lógica principal ─────────────────────────────────────────────────────────
+def main():
+    validar_argumentos()
 
-# Definir los directorios
-original_dir = 'dbf_original'
-generated_dir = 'dbfs_generados'
+    IM_ANO_CLA  = str(sys.argv[1])
+    IM_NUM_TAS  = str(sys.argv[2])
+    IM_SUP_TAS  = sys.argv[3]          # Se convierte a numérico más abajo si hace falta
+    IMAGEN      = sys.argv[4]
+    new_dbf_file = sys.argv[5]
 
-# Archivos de origen .dbf y .mem con sus rutas completas
-dbf_file = os.path.join(original_dir, 'I27244321.dbf')
-mem_file = os.path.join(original_dir, 'I27244321.mem')
+    original_dir  = 'dbf_original'
+    generated_dir = 'dbfs_generados'
 
-# Verificar que el directorio de destino existe o crearlo
-os.makedirs(generated_dir, exist_ok=True)
+    dbf_file  = os.path.join(original_dir, 'I27244321.dbf')
+    mem_file  = os.path.join(original_dir, 'I27244321.mem')
 
-# Ruta completa para el archivo modificado
-new_dbf_file_path = os.path.join(generated_dir, new_dbf_file)
+    # Verificar que el archivo origen existe
+    if not os.path.exists(dbf_file):
+        print(f"Error: no se encontró el archivo origen '{dbf_file}'")
+        sys.exit(1)
 
-# Usar el entorno with para abrir y manipular el archivo .dbf original en modo de solo lectura
-with dbf.Table(dbf_file) as table:
-    # Abrir la tabla en modo READ_ONLY para proteger el archivo original
-    table.open(dbf.READ_ONLY)
+    os.makedirs(generated_dir, exist_ok=True)
+    new_dbf_file_path = os.path.join(generated_dir, new_dbf_file)
 
-    # Obtener la estructura de la tabla y ajustar si es necesario
-    field_specs = [field.replace(' NULL', '') for field in table.structure()]
+    table     = None
+    new_table = None
 
-    # Crear una nueva tabla en el directorio de destino especificando el tipo como Visual FoxPro
-    new_table = dbf.Table(new_dbf_file_path, ';'.join(field_specs), dbf_type='vfp')
-    new_table.open(dbf.READ_WRITE)
+    try:
+        # ── Abrir tabla original SIN with (evita el doble open que causaba el bug) ──
+        table = dbf.Table(dbf_file)
+        table.open(dbf.READ_ONLY)
 
-    # Copiar y modificar cada registro en la nueva tabla sin alterar el archivo original
-    for record in table:
-        # Crear un nuevo registro en la nueva tabla
-        new_table.append()  # Añade un nuevo registro vacío
-        new_record = new_table[-1]  # Accede al último registro agregado
+        # Limpiar la especificación de campos
+        field_specs = [f.replace(' NULL', '') for f in table.structure()]
 
-        # Modificar los campos deseados en el nuevo registro dentro de un contexto `with`
-        with new_record as rec:
-            # Copiar todos los campos del registro original al nuevo registro
-            for field in table.field_names:
-                rec[field] = record[field]
-            
-            # Modificar los campos deseados en el nuevo registro
-            rec["IM_ANO_CLA"] = IM_ANO_CLA
-            rec["IM_NUM_TAS"] = IM_NUM_TAS
-            rec["IM_SUP_TAS"] = IM_SUP_TAS
-            rec["IMAGEN"] = IMAGEN
+        # ── Crear y abrir la nueva tabla ──────────────────────────────────────
+        new_table = dbf.Table(new_dbf_file_path, ';'.join(field_specs), dbf_type='vfp')
+        new_table.open(dbf.READ_WRITE)
 
-    # Cerrar la nueva tabla
-    new_table.close()
+        # ── Copiar registros modificando los campos deseados ──────────────────
+        for record in table:
+            new_table.append()
+            with new_table[-1] as rec:
+                # Copiar todos los campos del registro original
+                for field in table.field_names:
+                    rec[field] = record[field]
 
-# Renombrar el archivo .fpt a .FPT en mayúsculas después de cerrar la nueva tabla
-fpt_path = new_dbf_file_path.replace('.dbf', '.fpt')
-fpt_upper_path = new_dbf_file_path.replace('.dbf', '.FPT')
-if os.path.exists(fpt_path):
-    os.rename(fpt_path, fpt_upper_path)
+                # Sobrescribir los campos solicitados
+                rec["IM_ANO_CLA"] = IM_ANO_CLA
+                rec["IM_NUM_TAS"] = IM_NUM_TAS
+                rec["IMAGEN"]     = IMAGEN
 
-# Copiar el archivo .mem y renombrarlo para que coincida con el nuevo archivo en minúsculas
-new_mem_file_path = os.path.join(generated_dir, new_dbf_file.replace('.dbf', '.mem'))
-shutil.copy(mem_file, new_mem_file_path)
+                # Convertir IM_SUP_TAS al tipo correcto según el campo destino
+                try:
+                    rec["IM_SUP_TAS"] = float(IM_SUP_TAS)
+                except (ValueError, dbf.FieldDataError):
+                    rec["IM_SUP_TAS"] = IM_SUP_TAS
 
-print(f"Archivo modificado y guardado como {new_dbf_file} con su .fpt correspondiente.")
+        # ── Cerrar ambas tablas explícitamente ────────────────────────────────
+        table.close()
+        new_table.close()
+
+        # ── Renombrar .fpt → .FPT ─────────────────────────────────────────────
+        fpt_path       = new_dbf_file_path.replace('.dbf', '.fpt')
+        fpt_upper_path = new_dbf_file_path.replace('.dbf', '.FPT')
+        if os.path.exists(fpt_path):
+            os.rename(fpt_path, fpt_upper_path)
+        else:
+            print("Aviso: no se encontró el archivo .fpt generado.")
+
+        # ── Copiar el .mem ────────────────────────────────────────────────────
+        if os.path.exists(mem_file):
+            new_mem_path = os.path.join(generated_dir, new_dbf_file.replace('.dbf', '.mem'))
+            shutil.copy(mem_file, new_mem_path)
+        else:
+            print(f"Aviso: no se encontró el archivo .mem en '{mem_file}'.")
+
+        print(f"✓ Archivo modificado y guardado como '{new_dbf_file}' con su .fpt correspondiente.")
+
+    except dbf.DbfError as e:
+        print(f"Error DBF: {e}")
+        sys.exit(1)
+    except PermissionError as e:
+        print(f"Error de permisos: {e}")
+        sys.exit(1)
+    except Exception as e:
+        print(f"Error inesperado ({type(e).__name__}): {e}")
+        sys.exit(1)
+    finally:
+        # Garantizar cierre aunque ocurra una excepción
+        if table and table.status != dbf.CLOSED:
+            table.close()
+        if new_table and new_table.status != dbf.CLOSED:
+            new_table.close()
+
+if __name__ == '__main__':
+    main()

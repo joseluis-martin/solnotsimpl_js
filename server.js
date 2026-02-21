@@ -1,6 +1,6 @@
 const express = require('express');
 const https = require('https');
-// const http = require('http');
+const http = require('http');
 const fs = require('fs');
 const fsp = require('fs').promises;
 const path = require('path');
@@ -2105,23 +2105,45 @@ async function processCorpmeFlotiFacturacion(xmlData, res) {
         logAction(`Error al guardar los datos de facturación en la base de datos`);
         res.status(500).send('Error al guardar los datos de facturación en la base de datos');
     } finally {
-        if (pool) await pool.close();
+
+        if (pool) {
+            try {
+               await pool.close();
+                console.log('ConexiÃ³n de facturaciÃ³n cerrada correctamente');
+            } catch (closeErr) {
+                console.error('Error al cerrar la conexiÃ³n:', closeErr);
+            }
+        }
+
     }
 }
+///////    EN DOCKER NO HACE FALTA HTTPS, tenemos un PROXY REVERSO DELANTE QUE SE ENCARGA
+///////    // Opciones de HTTPS incluyendo el archivo .pfx y la contraseña
+///////    const credentials = {
+///////        pfx: fs.readFileSync(process.env.SSL_PFX_PATH),
+///////        passphrase: process.env.SSL_PFX_PASSWORD
+///////    };
+///////    
+///////    const httpsServer = https.createServer(credentials, app);
+///////    httpsServer.setTimeout(0);
+///////    
+///////    httpsServer.listen(port, () => {
+///////        console.log(`Servidor escuchando en https://localhost:${port}`);
+///////        logAction(`Servidor iniciado en puerto ${port}`);
+///////    });
+///////    
 
-// Opciones de HTTPS incluyendo el archivo .pfx y la contraseña
-const credentials = {
-    pfx: fs.readFileSync(process.env.SSL_PFX_PATH),
-    passphrase: process.env.SSL_PFX_PASSWORD
-};
 
-const httpsServer = https.createServer(credentials, app);
-httpsServer.setTimeout(0);
 
-httpsServer.listen(port, () => {
-    console.log(`Servidor escuchando en https://localhost:${port}`);
+// Crear servidor HTTP en lugar de HTTPS
+const httpServer = http.createServer(app);
+httpServer.setTimeout(0);
+httpServer.listen(port, () => {
+    console.log(`Servidor escuchando en http://localhost:${port}`);
     logAction(`Servidor iniciado en puerto ${port}`);
 });
+
+
 
 
 function runFetchPendingRequests() {

@@ -2,6 +2,31 @@ import sys
 import dbf
 import os
 import shutil
+from datetime import datetime
+import json
+
+LOG_FILE = 'logs/app.log'
+
+def log(level, message):
+    timestamp = datetime.now().strftime('%d/%m/%Y %H:%M:%S')
+    log_entry = f'{{"level":{level},"time":"{timestamp}","msg":"[PYTHON] {message}"}}\n'
+    try:
+        os.makedirs('logs', exist_ok=True)
+        with open(LOG_FILE, 'a', encoding='utf-8') as f:
+            f.write(log_entry)
+    except Exception as e:
+        print(f'Error escribiendo al log: {e}')
+    
+    if level == 30:
+        print(f'[PYTHON] {message}')
+    else:
+        print(f'[PYTHON] ERROR: {message}')
+
+def log_info(message):
+    log(30, message)
+
+def log_error(message):
+    log(50, message)
 
 # ─── Validación de argumentos (esto no deberia fallar)
 def validar_argumentos():
@@ -28,7 +53,7 @@ def main():
 
     # Verificar que el archivo origen existe
     if not os.path.exists(dbf_file):
-        print(f"Error: no se encontró el archivo origen '{dbf_file}'")
+        log_error(f"No se encontró el archivo origen '{dbf_file}'")
         sys.exit(1)
 
     os.makedirs(generated_dir, exist_ok=True)
@@ -77,26 +102,28 @@ def main():
         fpt_upper_path = new_dbf_file_path.replace('.dbf', '.FPT')
         if os.path.exists(fpt_path):
             os.rename(fpt_path, fpt_upper_path)
+            log_info(f"Archivo .fpt renombrado a .FPT")
         else:
-            print("Aviso: no se encontró el archivo .fpt generado.")
+            log_info("Aviso: no se encontró el archivo .fpt generado.")
 
         # ── Copiar el .mem ────────────────────────────────────────────────────
         if os.path.exists(mem_file):
             new_mem_path = os.path.join(generated_dir, new_dbf_file.replace('.dbf', '.mem'))
             shutil.copy(mem_file, new_mem_path)
+            log_info(f"Archivo .mem copiado")
         else:
-            print(f"Aviso: no se encontró el archivo .mem en '{mem_file}'.")
+            log_info(f"Aviso: no se encontró el archivo .mem en '{mem_file}'.")
 
-        print(f"✓ Archivo modificado y guardado como '{new_dbf_file}' con su .fpt correspondiente.")
+        log_info(f"Archivo modificado y guardado como '{new_dbf_file}' con su .fpt correspondiente")
 
     except dbf.DbfError as e:
-        print(f"Error DBF: {e}")
+        log_error(f"Error DBF: {e}")
         sys.exit(1)
     except PermissionError as e:
-        print(f"Error de permisos: {e}")
+        log_error(f"Error de permisos: {e}")
         sys.exit(1)
     except Exception as e:
-        print(f"Error inesperado ({type(e).__name__}): {e}")
+        log_error(f"Error inesperado ({type(e).__name__}): {e}")
         sys.exit(1)
     finally:
         # Garantizar cierre aunque ocurra una excepción

@@ -865,7 +865,7 @@ async function processReenvioCorpmeFloti(xmlData, idPeticion, idVersion) {
 
         } catch (err) {
             logger.error('Error al guardar el XML en la base de datos:', err);
-            res.status(500).send('Error al guardar el XML en la base de datos');
+            if (!res.headersSent) res.status(500).send('Error al guardar el XML en la base de datos');
             return;
         }
 
@@ -946,7 +946,7 @@ async function processReenvioCorpmeFloti(xmlData, idPeticion, idVersion) {
                 } catch (err) {
                     logger.error('Error al guardar el PDF en la base de datos:', err);
                     logger.info(`Error al guardar el PDF en la base de datos: ${err}`);
-                    // res.status(500).send('Error al guardar el PDF en la base de datos');
+                    // if (!res.headersSent) res.status(500).send('Error al guardar el PDF en la base de datos');
                     return;
                 }
             }
@@ -1006,7 +1006,7 @@ async function processReenvioCorpmeFloti(xmlData, idPeticion, idVersion) {
                 } catch (err) {
                     logger.error('(Reenvio) Error al guardar el tipo-respuesta en la base de datos:', err);
                     logger.info(`(Reenvio) Error al guardar el tipo-respuesta en la base de datos: ${err}`);
-                    //res.status(500).send('Error al procesar la respuesta');
+                    //if (!res.headersSent) res.status(500).send('Error al procesar la respuesta');
                 }
             } else {
                 try {
@@ -1059,7 +1059,7 @@ async function processReenvioCorpmeFloti(xmlData, idPeticion, idVersion) {
                 } catch (err) {
                     logger.error('(ReenvÃ­o) Error al guardar el tipo-respuesta en la base de datos:', err);
                     logger.info(`(ReenvÃ­o) Error al guardar el tipo-respuesta en la base de datos: ${err}`);
-                    //res.status(500).send('Error al procesar la respuesta');
+                    //if (!res.headersSent) res.status(500).send('Error al procesar la respuesta');
                 }
             }
         }
@@ -1253,10 +1253,10 @@ app.post('/spnts', async (req, res) => {
         // Verificar el tipo de XML y procesarlo en consecuencia
         if (xmlData['corpme-floti']) {
             await processCorpmeFloti(xmlData, res);
-            res.status(200).send('Procesado');
+            if (!res.headersSent) res.status(200).send('Procesado');
         } else if (xmlData['corpme-floti-facturacion']) {
             await processCorpmeFlotiFacturacion(xmlData, res);
-            res.status(200).send('Procesado en facturacion');
+            if (!res.headersSent) res.status(200).send('Procesado en facturacion');
         } else {
             res.status(400).send('Formato de XML invÃ¡lido o datos faltantes');
             logger.info(`Recibida una respuesta con Formato de XML invÃ¡lido o datos faltantes`);
@@ -1264,7 +1264,7 @@ app.post('/spnts', async (req, res) => {
 
     } catch (error) {
         logger.error(error);
-        res.status(500).send('Error al procesar la respuesta');
+        if (!res.headersSent) res.status(500).send('Error al procesar la respuesta');
         logger.info(`Error al procesar una respuesta: ${error}`);
     }
 });
@@ -1314,7 +1314,7 @@ async function processCorpmeFloti(xmlData, res) {
 
         } catch (err) {
             logger.error('Error al guardar el XML en la base de datos:', err);
-            res.status(500).send('Error al guardar el XML en la base de datos');
+            if (!res.headersSent) res.status(500).send('Error al guardar el XML en la base de datos');
             return;
         }
 
@@ -1413,7 +1413,7 @@ async function processCorpmeFloti(xmlData, res) {
                 } catch (err) {
                     logger.error('Error al guardar el PDF en la base de datos:', err);
                     logger.info(`Error al guardar el PDF en la base de datos: ${err}`);
-                    res.status(500).send('Error al guardar el PDF en la base de datos');
+                    if (!res.headersSent) res.status(500).send('Error al guardar el PDF en la base de datos');
                     return;
                 }
             }
@@ -1480,7 +1480,7 @@ async function processCorpmeFloti(xmlData, res) {
                 } catch (err) {
                     logger.error('Error al guardar el PDF en la base de datos:', err);
                     logger.info(`Error al guardar el PDF en la base de datos: ${err}`);
-                    res.status(500).send('Error al guardar el PDF en la base de datos');
+                    if (!res.headersSent) res.status(500).send('Error al guardar el PDF en la base de datos');
                     return;
                 }
             }
@@ -1542,7 +1542,7 @@ async function processCorpmeFloti(xmlData, res) {
             } catch (err) {
                 logger.error('Error al guardar el tipo-respuesta en la base de datos:', err);
                 logger.info(`Error al guardar el tipo-respuesta en la base de datos: ${err}`);
-                res.status(500).send('Error al procesar la respuesta');
+                if (!res.headersSent) res.status(500).send('Error al procesar la respuesta');
             }
         } else {
            // Notas denegadas 
@@ -1604,7 +1604,7 @@ async function processCorpmeFloti(xmlData, res) {
                 } catch (err) {
                     logger.error('Error al guardar el tipo-respuesta en la base de datos:', err);
                     logger.info(`Error al guardar el tipo-respuesta en la base de datos: ${err}`);
-                    res.status(500).send('Error al procesar la respuesta');
+                    if (!res.headersSent) res.status(500).send('Error al procesar la respuesta');
                 }
             } else {
                 try {
@@ -1681,7 +1681,7 @@ async function processCorpmeFloti(xmlData, res) {
                 } catch (err) {
                     logger.error('Error al guardar el tipo-respuesta en la base de datos:', err);
                     logger.info(`Error al guardar el tipo-respuesta en la base de datos: ${err}`);
-                    res.status(500).send('Error al procesar la respuesta');
+                    if (!res.headersSent) res.status(500).send('Error al procesar la respuesta');
                 }
             }
         }
@@ -1710,7 +1710,7 @@ async function processCorpmeFloti(xmlData, res) {
 //     fs.writeFile(`./xml_facturas_recibidas/${fileName}`, xmlString, (err) => {
 //         if (err) {
 //             logger.error('Error al guardar el archivo XML:', err);
-//             res.status(500).send('Error al guardar el archivo XML');
+//             if (!res.headersSent) res.status(500).send('Error al guardar el archivo XML');
 //             return;
 //         }
 //         logger.info(`Archivo XML de facturaciÃ³n guardado`);
@@ -1901,7 +1901,7 @@ async function processCorpmeFloti(xmlData, res) {
 //         } catch (err) {
 //             logger.error('Error al guardar en la base de datos:', err);
 //             logger.info(`Error al guardar los datos de facturaciÃ³n en la base de datos`);
-//             res.status(500).send('Error al guardar los datos de facturaciÃ³n en la base de datos');
+//             if (!res.headersSent) res.status(500).send('Error al guardar los datos de facturaciÃ³n en la base de datos');
 //             return;
 //         } finally {
 //             if (pool) {
@@ -1932,7 +1932,7 @@ async function processCorpmeFlotiFacturacion(xmlData, res) {
         logEscritura(logger, 'XML FacturaciÃ³n', './xml_facturas_recibidas/', fileName);
     } catch (err) {
         logger.error('Error al guardar el archivo XML:', err);
-        res.status(500).send('Error al guardar el archivo XML');
+        if (!res.headersSent) res.status(500).send('Error al guardar el archivo XML');
         return;
     }
 
@@ -1943,7 +1943,7 @@ async function processCorpmeFlotiFacturacion(xmlData, res) {
         parsedXml = await xml2js.parseStringPromise(xmlContent);
     } catch (err) {
         logger.error('Error al leer o parsear el archivo XML:', err);
-        res.status(500).send('Error al procesar el archivo XML guardado');
+        if (!res.headersSent) res.status(500).send('Error al procesar el archivo XML guardado');
         return;
     }
 
@@ -2099,7 +2099,7 @@ async function processCorpmeFlotiFacturacion(xmlData, res) {
     } catch (err) {
         logger.error('Error al guardar en la base de datos:', err);
         logger.info(`Error al guardar los datos de facturaciÃ³n en la base de datos`);
-        res.status(500).send('Error al guardar los datos de facturaciÃ³n en la base de datos');
+        if (!res.headersSent) res.status(500).send('Error al guardar los datos de facturaciÃ³n en la base de datos');
     } finally {
 
         if (pool) {

@@ -1083,7 +1083,7 @@ app.post('/spnts', async (req, res) => {
         }
     } catch (error) {
         console.error(error);
-        res.status(500).send('Error al procesar la respuesta');
+        if (!res.headersSent) res.status(500).send('Error al procesar la respuesta');
         logAction(`Error al procesar respuesta: ${error}`);
     }
 });
@@ -1128,7 +1128,7 @@ async function processCorpmeFlotiFacturacion(xmlData, res) {
     fs.writeFile(`./xml_facturas_recibidas/${fileName}`, xmlString, err => {
         if (err) {
             console.error('Error al guardar facturación:', err);
-            res.status(500).send('Error al guardar XML de facturación');
+            if (!res.headersSent) res.status(500).send('Error al guardar XML de facturación');
             return;
         }
         console.log('Archivo XML de facturación guardado');

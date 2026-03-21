@@ -68,24 +68,32 @@ const origError = logger.error.bind(logger);
 const origWarn = logger.warn.bind(logger);
 const origDebug = logger.debug.bind(logger);
 
+const formatConsoleLog = (level, msg) => {
+    return pretty(JSON.stringify({ 
+        level, 
+        msg, 
+        time: formatSpanish(new Date()) 
+    }));
+};
+
 logger.info = (msg, ...args) => {
     origInfo(msg, ...args);
-    process.stdout.write(pretty(JSON.stringify({ level: 30, msg })) + '\n');
+    process.stdout.write(formatConsoleLog(30, msg) + '\n');
 };
 
 logger.error = (msg, ...args) => {
     origError(msg, ...args);
-    process.stdout.write(pretty(JSON.stringify({ level: 50, msg })) + '\n');
+    process.stdout.write(formatConsoleLog(50, msg) + '\n');
 };
 
 logger.warn = (msg, ...args) => {
     origWarn(msg, ...args);
-    process.stdout.write(pretty(JSON.stringify({ level: 40, msg })) + '\n');
+    process.stdout.write(formatConsoleLog(40, msg) + '\n');
 };
 
 logger.debug = (msg, ...args) => {
     origDebug(msg, ...args);
-    process.stdout.write(pretty(JSON.stringify({ level: 20, msg })) + '\n');
+    process.stdout.write(formatConsoleLog(20, msg) + '\n');
 };
 
 module.exports = logger;

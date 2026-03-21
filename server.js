@@ -17,7 +17,7 @@ const upload = multer({ dest: 'uploads/' });
 const moment = require('moment');
 const sql = require('mssql');
 const { exec } = require('child_process');
-const logFilePath = './logs/actions.log';  // Ruta del archivo de log
+
 require('dotenv').config();
 //const url = 'https://test.registradores.org/xmlpeticion';
 //const url = 'http://localhost:3000/xmlpeticion'
@@ -26,7 +26,7 @@ const url = process.env.XML_URL;
 const port = process.env.PORT;
 const instance = axios.create({
     httpsAgent: new https.Agent({  
-        rejectUnauthorized: false // Desactiva la validaciÃ³n de certificados
+        rejectUnauthorized: false // Desactiva la validación de certificados
     }),
     retry: 0, // Sin reintentos
     timeout: 15000  // Timeout de 5000 ms (5 segundos)
@@ -49,20 +49,20 @@ app.use(xmlparser({ limit: '100mb' }))
 // Servir archivos estÃ¡ticos (HTML, CSS, JS, etc.)
 app.use(express.static('public')); 
 
-// ConfiguraciÃ³n para acceder a la BBDD de tasadores
+// Configuración para acceder a la BBDD de tasadores
 const config = {
     user: process.env.DB_USER,  // Usuario de la base de datos
     password: process.env.DB_PASSWORD,  // ContraseÃ±a del usuario
-    server: process.env.DB_SERVER,  // DirecciÃ³n IP y puerto del servidor SQL Server
+    server: process.env.DB_SERVER,  // Dirección IP y puerto del servidor SQL Server
     port: parseInt(process.env.DB_PORT),  // Puerto de la base de datos
     database: process.env.DB_DATABASE,  // Nombre de la base de datos
     options: {
-        encrypt: false,  // Cambiar a true si se usa en producciÃ³n y requiere cifrado
+        encrypt: false,  // Cambiar a true si se usa en producción y requiere cifrado
         enableArithAbort: true
     }
 };
 
-// FunciÃ³n para realizar la consulta y llamar a Python
+// Función para realizar la consulta y llamar a Python
 async function modificarDBFConPython(idPeticion, idVersion) {
     try {
         // Crear una nueva solicitud SQL para la consulta `get_For_DBF`
@@ -126,7 +126,7 @@ async function modificarDBFConPython(idPeticion, idVersion) {
                     @NombreArchivo
             `);
 
-            logger.info(`Registro insertado con Ã©xito en peticiones_peticion_dbf_insert para idDocumento: ${idDocumento} y NombreArchivo: ${NombreArchivo}`);
+            logger.info(`Registro insertado con éxito en peticiones_peticion_dbf_insert para idDocumento: ${idDocumento} y NombreArchivo: ${NombreArchivo}`);
             logger.info(`Ejecutado peticiones_peticion_dbf_insert para idDocumento: ${idDocumento}, NombreArchivo: ${NombreArchivo}`);
         } catch (error) {
             logger.error(`Error al ejecutar peticiones_peticion_dbf_insert: ${error.message}`);
@@ -135,7 +135,7 @@ async function modificarDBFConPython(idPeticion, idVersion) {
 
         // Llamada al procedimiento notassimples.peticiones_historia_new 
         try {
-            const comentario = `GeneraciÃ³n del archivo DBF: ${NombreArchivo}`;
+            const comentario = `Generación del archivo DBF: ${NombreArchivo}`;
             const historiaRequest = new sql.Request();
         
 
@@ -154,7 +154,7 @@ async function modificarDBFConPython(idPeticion, idVersion) {
                     @comentario
             `);
 
-            logger.info(`Registro de historial insertado con Ã©xito para idPeticion: ${idPeticion}, idVersion: ${idVersion} con el comentario: "${comentario}"`);
+            logger.info(`Registro de historial insertado con éxito para idPeticion: ${idPeticion}, idVersion: ${idVersion} con el comentario: "${comentario}"`);
             logger.info(`Ejecutado peticiones_historia_new para idPeticion: ${idPeticion}, idVersion: ${idVersion} con comentario: "${comentario}"`);
         } catch (error) {
             logger.error(`Error al ejecutar peticiones_historia_new: ${error.message}`);
@@ -166,13 +166,13 @@ async function modificarDBFConPython(idPeticion, idVersion) {
     }
 }
 
-// Middleware de autenticaciÃ³n bÃ¡sica
+// Middleware de autenticación bÃ¡sica
 function basicAuth(req, res, next) {
     const authHeader = req.headers.authorization;
 
     if (!authHeader) {
         res.setHeader('WWW-Authenticate', 'Basic');
-        return res.status(401).send('AutenticaciÃ³n requerida.');
+        return res.status(401).send('Autenticación requerida.');
     }
 
     const base64Credentials = authHeader.split(' ')[1];
@@ -186,7 +186,7 @@ function basicAuth(req, res, next) {
     return res.status(401).send('Credenciales incorrectas.');
 }
 
-// Aplica autenticaciÃ³n a las rutas administrativas
+// Aplica autenticación a las rutas administrativas
 app.use(['/admin', '/status', '/logs', '/stop', '/restart'], basicAuth);
 
 
@@ -206,7 +206,7 @@ async function getIdUsuarioByIdPeticionAndIdVersion(idPeticion, idVersion) {
     return result.recordset.length > 0 ? result.recordset[0].idUsuario : null;
 }
 
-// FunciÃ³n para extraer CSV y Huella del PDF
+// Función para extraer CSV y Huella del PDF
 async function extractCodesFromPdf(pdfBuffer) {
     try {
         const data = await pdf(pdfBuffer);
@@ -241,9 +241,9 @@ async function fetchPendingRequests() {
 
     try {
         await sql.connect(config);
-        // idEstado = 1 Pendiente de peticiÃ³n
+        // idEstado = 1 Pendiente de petición
         const peticiones = await sql.query`SELECT idPeticion, idVersion, idUsuario FROM peticiones WHERE idEstado = 1`;
-       // Recorrer cada peticiÃ³n encontrada
+       // Recorrer cada petición encontrada
         for (let i = 0; i < peticiones.recordset.length; i++) {
             const idPeticion = peticiones.recordset[i].idPeticion;
             const idVersion =  peticiones.recordset[i].idVersion;
@@ -286,9 +286,9 @@ async function fetchPendingRequests() {
                 });
             }
         }
-        // idEstado = 6 Pendiente de peticiÃ³n de reenvÃ­o
+        // idEstado = 6 Pendiente de petición de reenvÃ­o
         const peticionesReenvio = await sql.query`SELECT idPeticion, idVersion, idCorpme FROM peticiones WHERE idEstado = 6`;
-        // Recorrer cada peticiÃ³n encontrada
+        // Recorrer cada petición encontrada
         for (let i = 0; i < peticionesReenvio.recordset.length; i++) {
             const idPeticion = peticionesReenvio.recordset[i].idPeticion;
             const idVersion =  peticionesReenvio.recordset[i].idVersion;
@@ -322,7 +322,7 @@ async function fetchPendingRequests() {
         }
 
         if (resultadosReenvio.length > 0) {
-            logger.info(`Resultados de ReenvÃ­o encontrados: ${resultadosReenvio}`);
+            logger.info(`Resultados de Re-Envio encontrados: ${resultadosReenvio}`);
         } else {
             //logger.info("No se encontraron registros vÃ¡lidos para IDUFIR o el idTipoSolicitud no es 3.");
         }
@@ -345,14 +345,14 @@ async function sendXMLxTitular(resultados) {
         try {
             const parsedXml = await xml2js.parseStringPromise(xml);
 
-            // ModificaciÃ³n del XML con los datos del archivo .env
+            // Modificación del XML con los datos del archivo .env
             parsedXml['corpme-floti'].peticiones[0].credenciales[0].entidad[0] = CREDENCIALES.ENTIDAD;
             parsedXml['corpme-floti'].peticiones[0].credenciales[0].grupo[0] = CREDENCIALES.GRUPO;
             parsedXml['corpme-floti'].peticiones[0].credenciales[0].usuario[0] = CREDENCIALES.USUARIO;
             
             //parsedXml['corpme-floti'].peticiones[0].credenciales[0].email[0] = CREDENCIALES.EMAIL;
 
-            // Obtener email del usuario de la base de datos con la funciÃ³n  usar valor predeterminado
+            // Obtener email del usuario de la base de datos con la función  usar valor predeterminado
             await sql.connect(config);
             const result = await sql.query`
                 SELECT notassimples.get_email_usuario(${idUsuario}) AS email
@@ -411,8 +411,8 @@ async function sendXMLxTitular(resultados) {
                 // Algo ocurriÃ³ al configurar la solicitud que disparÃ³ un error
                 logger.error('Error configurando la solicitud para ID:', idPeticion, 'version:', idVersion);
             }
-            logger.error('InformaciÃ³n del error:', error.message);  // Mensaje general del error
-            logger.info(`Error al lanzar peticiÃ³n x Titular : ${error.message}`);
+            logger.error('Información del error:', error.message);  // Mensaje general del error
+            logger.info(`Error al lanzar petición x Titular : ${error.message}`);
         }
     }
 }
@@ -426,14 +426,14 @@ async function sendXMLxIDUFIR(resultados) {
         try {
             const parsedXml = await xml2js.parseStringPromise(xml);
 
-            // ModificaciÃ³n del XML con los datos del archivo .env
+            // Modificación del XML con los datos del archivo .env
             parsedXml['corpme-floti'].peticiones[0].credenciales[0].entidad[0] = CREDENCIALES.ENTIDAD;
             parsedXml['corpme-floti'].peticiones[0].credenciales[0].grupo[0] = CREDENCIALES.GRUPO;
             parsedXml['corpme-floti'].peticiones[0].credenciales[0].usuario[0] = CREDENCIALES.USUARIO;
  
             //parsedXml['corpme-floti'].peticiones[0].credenciales[0].email[0] = CREDENCIALES.EMAIL;
 
-            // Obtener email del usuario de la base de datos con la funciÃ³n  usar valor predeterminado
+            // Obtener email del usuario de la base de datos con la función  usar valor predeterminado
             await sql.connect(config);
             const result = await sql.query`
                 SELECT notassimples.get_email_usuario(${idUsuario}) AS email
@@ -489,8 +489,8 @@ async function sendXMLxIDUFIR(resultados) {
             } else {
                 logger.error('Error configurando la solicitud para ID:', idPeticion, 'version:', idVersion);
             }
-            logger.error('InformaciÃ³n del error:', error.message);  // Mensaje general del error
-            logger.info(`Error al lanzar peticiÃ³n x IDUFIR : ${error.message}`);
+            logger.error('Información del error:', error.message);  // Mensaje general del error
+            logger.info(`Error al lanzar petición x IDUFIR : ${error.message}`);
         }
     }
 }
@@ -504,12 +504,12 @@ async function sendXMLxFinca(resultados) {
         try {
             const parsedXml = await xml2js.parseStringPromise(xml);
 
-            // ModificaciÃ³n del XML con los datos del archivo .env
+            // Modificación del XML con los datos del archivo .env
             parsedXml['corpme-floti'].peticiones[0].credenciales[0].entidad[0] = CREDENCIALES.ENTIDAD;
             parsedXml['corpme-floti'].peticiones[0].credenciales[0].grupo[0] = CREDENCIALES.GRUPO;
             parsedXml['corpme-floti'].peticiones[0].credenciales[0].usuario[0] = CREDENCIALES.USUARIO;
 
-            // Obtener email del usuario de la base de datos con la funciÃ³n  usar valor predeterminado
+            // Obtener email del usuario de la base de datos con la función  usar valor predeterminado
             await sql.connect(config);
             const result = await sql.query`
                 SELECT notassimples.get_email_usuario(${idUsuario}) AS email
@@ -590,8 +590,8 @@ async function sendXMLxFinca(resultados) {
             } else {
                 logger.error('Error configurando la solicitud para ID:', idPeticion, 'version:', idVersion);
             }
-            logger.error('InformaciÃ³n del error:', error.message);  // Mensaje general del error
-            logger.info(`Error al lanzar peticiÃ³n x Finca : ${error.message}`);
+            logger.error('Información del error:', error.message);  // Mensaje general del error
+            logger.info(`Error al lanzar petición x Finca : ${error.message}`);
         }
     }
 }
@@ -637,7 +637,7 @@ async function sendXMLReenvio(resultados) {
                 else if ( receiptXml &&  receiptXml['corpme-floti'] && receiptXml['corpme-floti'].error &&  receiptXml['corpme-floti'].error.length > 0) {
                     const errorNode = receiptXml['corpme-floti'].error[0];
                     const codigoError = errorNode['$'] && errorNode['$'].codigo ? errorNode['$'].codigo : null;
-                    const errorText = errorNode['_'] || 'Sin informaciÃ³n adicional';
+                    const errorText = errorNode['_'] || 'Sin información adicional';
 
                     const xmlStringError = builder.buildObject(receiptXml);
                     try {
@@ -652,7 +652,7 @@ async function sendXMLReenvio(resultados) {
                         await requestUpdateXml.query(queryUpdateXml);
 
                     
-                        // Actualizar la peticiÃ³n asignando el estado 7 y registrando el cÃ³digo de error
+                        // Actualizar la petición asignando el estado 7 y registrando el cÃ³digo de error
                         const query = `UPDATE peticiones SET IdEstado = 7, idRespuesta = @codigoError WHERE idCorpme = @idCorpme AND idPeticion = @idPeticion AND idVersion = @idVersion`;
                         const request = new sql.Request();
                         request.input('codigoError', sql.Int, codigoError);
@@ -697,8 +697,8 @@ async function sendXMLReenvio(resultados) {
             } else {
                 logger.error('Error configurando la solicitud para ID:', idPeticion, 'version:', idVersion);
             }
-            logger.error('InformaciÃ³n del error:', error.message);  // Mensaje general del error
-            logger.info(`Error al lanzar peticiÃ³n de reenvÃ­o : ${error.message}`);
+            logger.error('Información del error:', error.message);  // Mensaje general del error
+            logger.info(`Error al lanzar petición de reenvÃ­o : ${error.message}`);
         }
     }
 }
@@ -707,7 +707,7 @@ async function handleReceipt(receipt, idPeticion, idVersion) {
     // Suponemos que estamos tratando con un solo acuse
     let comentario = ''; // Se inicializa el comentario con una cadena vacia
     let idUsuario = ''; // Se inicializa el idUsuario como una cadena vacÃ­a
-    let idEstado = 2; // Por defecto 2, que indica Ã©xito
+    let idEstado = 2; // Por defecto 2, que indica éxito
 
     try {
         // Se conecta a la base de datos para obtener el idUsuario de la tabla 'peticiones'
@@ -731,7 +731,7 @@ async function handleReceipt(receipt, idPeticion, idVersion) {
             logger.info(`Error general en el XML recibido para ID ${idPeticion} ${idVersion}: ${mensaje} (CÃ³digo ${codigo})`);
 
             idEstado = 3; // Se cambia el estado a 3 (indica error)
-            comentario = `PeticiÃ³n recibida por Registradores KO: idError: ${codigo} | ${mensaje}`;
+            comentario = `Petición recibida por Registradores KO: idError: ${codigo} | ${mensaje}`;
 
             // Se Conecta a la base de datos y se actualiza el estado y el cÃ³digo de error
             await sql.connect(config);
@@ -752,7 +752,7 @@ async function handleReceipt(receipt, idPeticion, idVersion) {
                     logger.info(`Error especÃ­fico en el acuse para ID ${idPeticion} ${idVersion}: ${mensaje} (CÃ³digo ${codigo})`);
 
                     idEstado = 3; // Se cambia el estado a 3 por error especÃ­fico
-                    comentario = `PeticiÃ³n recibida por Registradores KO: idError: ${codigo} | ${mensaje}`;
+                    comentario = `Petición recibida por Registradores KO: idError: ${codigo} | ${mensaje}`;
 
                     // Se conecta a la base de datos y se actualiza el estado y el cÃ³digo de error
 
@@ -773,7 +773,7 @@ async function handleReceipt(receipt, idPeticion, idVersion) {
                             await sql.query`UPDATE peticiones SET idCorpme = ${identificador} WHERE idPeticion = ${idPeticion} AND idVersion = ${idVersion}`;
                             logger.info(`Identificador actualizado a ${identificador} para idPeticion ${idPeticion} y version ${idVersion}`);
                             logger.info(`Identificador actualizado a ${identificador} para idPeticion ${idPeticion} y version ${idVersion}`); 
-                            comentario = `PeticiÃ³n recibida por Registradores OK: idCorpme = ${identificador}`;
+                            comentario = `Petición recibida por Registradores OK: idCorpme = ${identificador}`;
                         }                    
                     }
                 } catch (err) {
@@ -783,7 +783,7 @@ async function handleReceipt(receipt, idPeticion, idVersion) {
             }
         }
         
-        // Se llama al procedure despuÃ©s de manejar el receipt
+        // Se llama al procedure después de manejar el receipt
 
         const query = `
             EXEC notassimples.peticiones_historia_new
@@ -814,7 +814,7 @@ async function handleReceipt(receipt, idPeticion, idVersion) {
     }
 }
 
-// FunciÃ³n para procesar el XML de respuesta a una solicitud de reenvÃ­o
+// Función para procesar el XML de respuesta a una solicitud de reenvÃ­o
 async function processReenvioCorpmeFloti(xmlData, idPeticion, idVersion) {
     const corpmeFloti = xmlData['corpme-floti'];
     if (corpmeFloti && corpmeFloti.respuesta && corpmeFloti.respuesta.length > 0) {
@@ -912,7 +912,7 @@ async function processReenvioCorpmeFloti(xmlData, idPeticion, idVersion) {
 
                     logger.info('(Reenvio sÃ­ncrono) PDF guardado en la base de datos exitosamente.');
 
-                    const comentario = 'RecepciÃ³n de NS por GT';
+                    const comentario = 'Recepción de NS por GT';
                     const idUsuario = "CORPME";
                     const idEstado = 5;
 
@@ -938,7 +938,7 @@ async function processReenvioCorpmeFloti(xmlData, idPeticion, idVersion) {
                     logger.info(`PDF de nota simple reenviada guardado en la base de datos exitosamente para idCorpme: ${identificador}, idPeticion: ${idPeticion} e idVersion: ${idVersion}`);
 
 
-                    // Leer y enviar XML de confirmaciÃ³n. 
+                    // Leer y enviar XML de confirmación. 
                     // const confirmacionXml = fs.readFileSync(path.join(__dirname, 'xml/corpme_floti_ok.xml'), 'utf8');
                     // res.set('Content-Type', 'text/xml');
                     // res.send(confirmacionXml);
@@ -969,7 +969,7 @@ async function processReenvioCorpmeFloti(xmlData, idPeticion, idVersion) {
 
                     if (idPeticion && idVersion) {
                         // Llamar al procedimiento con el comentario basado en informacion.texto
-                        const comentario = informacion && informacion.texto ? informacion.texto[0] : 'Sin informaciÃ³n adicional';
+                        const comentario = informacion && informacion.texto ? informacion.texto[0] : 'Sin información adicional';
                         //const idUsuario = await getIdUsuarioByIdPeticionAndIdVersion(idPeticion, idVersion);
                         const idUsuario = "CORPME";
                         const idEstado = 7;
@@ -998,7 +998,7 @@ async function processReenvioCorpmeFloti(xmlData, idPeticion, idVersion) {
                         logger.info(`(Reenvio) No se encontraron idPeticion o idVersion asociados con el identificador corpme`);
                     }
 
-                    // Enviar confirmaciÃ³n sin el procesamiento del PDF
+                    // Enviar confirmación sin el procesamiento del PDF
                     //const confirmacionXml = fs.readFileSync(path.join(__dirname, 'xml/corpme_floti_ok.xml'), 'utf8');
                     //res.set('Content-Type', 'text/xml');
                     //res.send(confirmacionXml);
@@ -1025,8 +1025,8 @@ async function processReenvioCorpmeFloti(xmlData, idPeticion, idVersion) {
                     let textoIntermedio;
                     textoIntermedio = 'Desconocido';
                 
-                    const textoTipoRespuesta = informacion && informacion.texto ? informacion.texto[0] : 'Sin informaciÃ³n adicional';
-                    const comentario = `PeticiÃ³n denegada por Registradores: idRespuesta: ${codigoTipoRespuesta} | ${textoIntermedio} | ${textoTipoRespuesta}`;
+                    const textoTipoRespuesta = informacion && informacion.texto ? informacion.texto[0] : 'Sin información adicional';
+                    const comentario = `Petición denegada por Registradores: idRespuesta: ${codigoTipoRespuesta} | ${textoIntermedio} | ${textoTipoRespuesta}`;
                     const idUsuario = "CORPME";
                     const idEstado = 4;
 
@@ -1048,10 +1048,10 @@ async function processReenvioCorpmeFloti(xmlData, idPeticion, idVersion) {
                         requestHistory.input('comentario', sql.NVarChar(sql.MAX), comentario);
             
                         await request.query(queryHistory);
-                        logger.info(`PeticiÃ³n ReenvÃ­o denegada por Registradores para solicitud de reenvÃ­o: idRespuesta: ${codigoTipoRespuesta} | ${textoIntermedio} | ${textoTipoRespuesta} | idCorpme: ${identificador} | idPeticion: ${idPeticion} | idVersion:${idPeticion}.`);
+                        logger.info(`Petición ReenvÃ­o denegada por Registradores para solicitud de reenvÃ­o: idRespuesta: ${codigoTipoRespuesta} | ${textoIntermedio} | ${textoTipoRespuesta} | idCorpme: ${identificador} | idPeticion: ${idPeticion} | idVersion:${idPeticion}.`);
 
 
-                    // Enviar confirmaciÃ³n sin el procesamiento del PDF
+                    // Enviar confirmación sin el procesamiento del PDF
                     // const confirmacionXml = fs.readFileSync(path.join(__dirname, 'xml/corpme_floti_ok.xml'), 'utf8');
                     // res.set('Content-Type', 'text/xml');
                     // res.send(confirmacionXml);
@@ -1074,7 +1074,7 @@ async function processReenvioCorpmeFloti(xmlData, idPeticion, idVersion) {
     res.sendFile(path.join(__dirname, '/public/index.html'));
 });
 
-// Ruta principal para servir la pÃ¡gina de administraciÃ³n
+// Ruta principal para servir la pÃ¡gina de administración
 app.get('/admin', (req, res) => {
     res.sendFile(path.join(__dirname, '/public/admin.html'));
 });
@@ -1090,53 +1090,45 @@ app.get('/status', (req, res) => {
     res.json(serverStatus);
 });
 
-// Ruta para manejar logs con paginaciÃ³n y filtro por fecha
+// Ruta para manejar logs con paginación y filtro por fecha
 app.get('/logs', (req, res) => {
-    const page = parseInt(req.query.page) || 1;  // PÃ¡gina actual
-    const linesPerPage = parseInt(req.query.limit) || 100;  // LÃ­neas por pÃ¡gina
+    const page = parseInt(req.query.page) || 1;
+    const linesPerPage = parseInt(req.query.limit) || 100;
 
-    // Obtener la fecha solicitada o la fecha actual
     const requestedDate = req.query.date ? moment(req.query.date, 'YYYY-MM-DD') : moment();
 
     if (!requestedDate.isValid()) {
-        return res.status(400).send('Formato de fecha invÃ¡lido. Utilice el formato YYYY-MM-DD.');
+        return res.status(400).send('Formato de fecha inválido. Utilice el formato YYYY-MM-DD.');
     }
 
+    const logFileName = `app_${requestedDate.format('DD_MM_YYYY')}.log`;
+    const logFilePath = path.join(__dirname, 'logs', logFileName);
+
     try {
-        const logContent = fs.readFileSync(logFilePath, 'utf8');  // Leer el archivo completo
-        const logLines = logContent.split('\n').filter(Boolean);  // Dividir en lÃ­neas y filtrar vacÃ­as
+        const logContent = fs.readFileSync(logFilePath, 'utf8');
+        const logLines = logContent.split('\n').filter(Boolean);
 
-        // Filtrar solo las lÃ­neas que coincidan con la fecha solicitada
-        const logsForDate = logLines.filter(line => {
-            const timestamp = line.match(/\[(.*?)\]/);  // Asumimos que el timestamp estÃ¡ entre corchetes [YYYY-MM-DDTHH:mm:ss]
-            if (timestamp) {
-                const logDate = moment(timestamp[1], 'YYYY-MM-DDTHH:mm:ss');
-                return logDate.isSame(requestedDate, 'day');  // Comparar solo la fecha
-            }
-            return false;
-        });
-
-        const totalLines = logsForDate.length;  // Total de lÃ­neas filtradas
-        const totalPages = Math.ceil(totalLines / linesPerPage);  // Total de pÃ¡ginas
+        const totalLines = logLines.length;
+        const totalPages = Math.ceil(totalLines / linesPerPage);
 
         if (totalLines === 0) {
             return res.json({
                 page: 1,
                 totalPages: 1,
-                logs: null,  // Indicamos que no hay logs
+                logs: null,
                 date: requestedDate.format('YYYY-MM-DD'),
-                message: 'No hay registros disponibles en esta fecha'  // Mensaje especial cuando no hay logs
+                message: 'No hay registros disponibles en esta fecha'
             });
         }
 
         if (page > totalPages) {
-            return res.status(404).send('PÃ¡gina no encontrada');
+            return res.status(404).send('Página no encontrada');
         }
 
-        const startLine = (page - 1) * linesPerPage;  // LÃ­nea de inicio para la paginaciÃ³n
-        const endLine = Math.min(startLine + linesPerPage, totalLines);  // LÃ­nea final
+        const startLine = (page - 1) * linesPerPage;
+        const endLine = Math.min(startLine + linesPerPage, totalLines);
 
-        const logsToShow = logsForDate.slice(startLine, endLine).join('\n');  // Logs de la pÃ¡gina actual
+        const logsToShow = logLines.slice(startLine, endLine).join('\n');
 
         res.json({
             page: page,
@@ -1145,9 +1137,80 @@ app.get('/logs', (req, res) => {
             date: requestedDate.format('YYYY-MM-DD')
         });
     } catch (error) {
+        if (error.code === 'ENOENT') {
+            return res.json({
+                page: 1,
+                totalPages: 1,
+                logs: null,
+                date: requestedDate.format('YYYY-MM-DD'),
+                message: 'No hay registros disponibles en esta fecha'
+            });
+        }
         logger.error(`Error al leer el archivo de logs: ${error.message}`);
         res.status(500).send('Error al leer el archivo de logs');
     }
+});
+
+// Ruta para métricas de logs de los últimos 7 días
+app.get('/logs/metrics', (req, res) => {
+    const metrics = [];
+
+    for (let i = 6; i >= 0; i--) {
+        const date = moment().subtract(i, 'days');
+        const logFileName = `app_${date.format('DD_MM_YYYY')}.log`;
+        const logFilePath = path.join(__dirname, 'logs', logFileName);
+
+        let exists = false;
+        let totalLines = 0;
+        let errors = 0;
+        let warnings = 0;
+        let pythonExec = 0;
+        let peticionesEnviadas = 0;
+        let acusesRecibidos = 0;
+        let peticionesOK = 0;
+        let peticionesError = 0;
+        let ciclosFetch = 0;
+
+        try {
+            const content = fs.readFileSync(logFilePath, 'utf8');
+            const lines = content.split('\n').filter(Boolean);
+            exists = true;
+            totalLines = lines.length;
+
+            for (const line of lines) {
+                try {
+                    const entry = JSON.parse(line);
+                    const level = entry.level || 0;
+                    const msg = entry.msg || '';
+
+                    if (level >= 50) errors++;
+                    if (level === 40) warnings++;
+                    if (msg.includes('[PYTHON]')) pythonExec++;
+                    if (/Solicitud.*lanzada.*y acuse recibido/.test(msg)) peticionesEnviadas++;
+                    if (msg.includes('Escribiendo archivo Acuse XML')) acusesRecibidos++;
+                    if (msg.includes('Estado actualizado a 2')) peticionesOK++;
+                    if (/Estado actualizado a [347]/.test(msg)) peticionesError++;
+                    if (msg.includes('Ejecutando ciclo de fetchPendingRequests')) ciclosFetch++;
+                } catch (e) { /* línea no es JSON válido */ }
+            }
+        } catch (e) { /* archivo no existe */ }
+
+        metrics.push({
+            date: date.format('YYYY-MM-DD'),
+            totalLines,
+            errors,
+            warnings,
+            pythonExec,
+            peticionesEnviadas,
+            acusesRecibidos,
+            peticionesOK,
+            peticionesError,
+            ciclosFetch,
+            exists
+        });
+    }
+
+    res.json(metrics);
 });
 
 // Ruta para obtener las estadisticas de peticiones
@@ -1190,8 +1253,8 @@ app.get('/stats', async (req, res) => {
 
         res.json(stats);
     } catch (error) {
-        logger.error('Error al obtener estadÃ­sticas de peticiones:', error);
-        res.status(500).send('Error al obtener estadÃ­sticas de peticiones');
+        logger.error('Error al obtener estadí­sticas de peticiones:', error);
+        res.status(500).send('Error al obtener estadísticas de peticiones');
     } finally {
         await sql.close();
     }
@@ -1206,6 +1269,7 @@ app.get('/procesar-peticiones-dbfs', async (req, res) => {
             SELECT TOP 5 T1.idDocumento, T1.idPeticion, T1.idVersion
             FROM tasadores.notassimples.peticiones T1
             WHERE T1.idRespuesta='1' AND T1.idEstado='5'
+            AND T1.idDocumento >= 18060
             AND NOT EXISTS (
                 SELECT NULL 
                 FROM tasadores.notassimples.peticiones_dbf T2 
@@ -1227,8 +1291,8 @@ app.get('/procesar-peticiones-dbfs', async (req, res) => {
             const { idPeticion, idVersion } = peticion;
             try {
                 await modificarDBFConPython(idPeticion, idVersion);
-                logger.info(`modificarDBFConPython ejecutado con Ã©xito para idPeticion: ${idPeticion}, idVersion: ${idVersion}`);
-                logger.info(`modificarDBFConPython ejecutado con Ã©xito para idPeticion: ${idPeticion}, idVersion: ${idVersion}`);
+                logger.info(`modificarDBFConPython ejecutado con éxito para idPeticion: ${idPeticion}, idVersion: ${idVersion}`);
+                logger.info(`modificarDBFConPython ejecutado con éxito para idPeticion: ${idPeticion}, idVersion: ${idVersion}`);
             } catch (error) {
                 logger.error(`Error al procesar modificarDBFConPython para idPeticion: ${idPeticion}, idVersion: ${idVersion}:`, error);
                 logger.info(`Error al procesar modificarDBFConPython para idPeticion: ${idPeticion}, idVersion: ${idVersion}: ${error.message}`);
@@ -1269,7 +1333,7 @@ app.post('/spnts', async (req, res) => {
     }
 });
 
-// FunciÃ³n para procesar el XML de tipo 'corpme-floti'
+// Función para procesar el XML de tipo 'corpme-floti'
 async function processCorpmeFloti(xmlData, res) {
     const corpmeFloti = xmlData['corpme-floti'];
     if (corpmeFloti && corpmeFloti.respuesta && corpmeFloti.respuesta.length > 0) {
@@ -1359,13 +1423,13 @@ async function processCorpmeFloti(xmlData, res) {
                     logger.info('PDF guardado en la base de datos exitosamente.');
 
                     // Se llama al procedure notassimples.peticiones_historia_new
-                    const idPeticion = await getIdPeticionByIdCorpme(identificador);  // FunciÃ³n para obtener idPeticion
-                    const idVersion = await getIdVersionByIdCorpme(identificador);    // FunciÃ³n para obtener idVersion
+                    const idPeticion = await getIdPeticionByIdCorpme(identificador);  // Función para obtener idPeticion
+                    const idVersion = await getIdVersionByIdCorpme(identificador);    // Función para obtener idVersion
 
 
                     if (idPeticion && idVersion) {
-                        const comentario = `RecepciÃ³n de NS por GT: CSV: ${csvCode} | Huella: ${huellaCode} `;
-                        //const idUsuario = await getIdUsuarioByIdPeticionAndIdVersion(idPeticion, idVersion); // ObtÃ©n el idUsuario de la tabla
+                        const comentario = `Recepción de NS por GT: CSV: ${csvCode} | Huella: ${huellaCode} `;
+                        //const idUsuario = await getIdUsuarioByIdPeticionAndIdVersion(idPeticion, idVersion); // Obtén el idUsuario de la tabla
                         const idUsuario = "CORPME";
                         const idEstado = 5;
 
@@ -1393,8 +1457,8 @@ async function processCorpmeFloti(xmlData, res) {
                         // Llamada a modificarDBFConPython y manejo de posibles errores
                         try {
                             await modificarDBFConPython(idPeticion, idVersion);
-                            logger.info(`GeneraciÃ³n de los archivos .dbf, .FPT y .mem ejecutada exitosamente para idPeticion: ${idPeticion} y idVersion: ${idVersion}`);
-                            logger.info(`GeneraciÃ³n de los archivos .dbf, .FPT y .mem ejecutada exitosamente para idPeticion: ${idPeticion} y idVersion: ${idVersion}`);
+                            logger.info(`Generación de los archivos .dbf, .FPT y .mem ejecutada exitosamente para idPeticion: ${idPeticion} y idVersion: ${idVersion}`);
+                            logger.info(`Generación de los archivos .dbf, .FPT y .mem ejecutada exitosamente para idPeticion: ${idPeticion} y idVersion: ${idVersion}`);
                         } catch (error) {
                             logger.error(`Error al ejecutar modificarDBFConPython: ${error.message}`);
                             logger.info(`Error al ejecutar modificarDBFConPython para idPeticion: ${idPeticion} y idVersion: ${idVersion}`);
@@ -1405,7 +1469,7 @@ async function processCorpmeFloti(xmlData, res) {
                         logger.info(`No se encontraron idPeticion o idVersion asociados con el identificador corpme`);
                     }
 
-                    // Leer y enviar XML de confirmaciÃ³n
+                    // Leer y enviar XML de confirmación
                     const confirmacionXml = fs.readFileSync(path.join(__dirname, 'xml/corpme_floti_ok.xml'), 'utf8');
                     res.set('Content-Type', 'text/xml');
                     res.send(confirmacionXml);
@@ -1425,8 +1489,8 @@ async function processCorpmeFloti(xmlData, res) {
 
                 try {
 
-                    const idPeticion = await getIdPeticionByIdCorpme(identificador);  // FunciÃ³n para obtener idPeticion
-                    const idVersion = await getIdVersionByIdCorpme(identificador);    // FunciÃ³n para obtener idVersion
+                    const idPeticion = await getIdPeticionByIdCorpme(identificador);  // Función para obtener idPeticion
+                    const idVersion = await getIdVersionByIdCorpme(identificador);    // Función para obtener idVersion
                     // ConexiÃ³n a la base de datos
                     await sql.connect(config);
                     const query = `UPDATE peticiones SET pdf = @pdf, IdEstado = 5, idRespuesta = @codigoTipoRespuesta WHERE idCorpme = @idCorpme AND idPeticion = @idPeticion AND idVersion = @idVersion`;
@@ -1442,7 +1506,7 @@ async function processCorpmeFloti(xmlData, res) {
                     logger.info('(Reenvio asÃ­ncrono) PDF guardado en la base de datos exitosamente.');
 
                     if (idPeticion && idVersion) {
-                        const comentario = 'RecepciÃ³n de NS por GT';
+                        const comentario = 'Recepción de NS por GT';
                         const idUsuario = "CORPME";
                         const idEstado = 5;
 
@@ -1472,7 +1536,7 @@ async function processCorpmeFloti(xmlData, res) {
                         logger.info(`No se encontraron idPeticion o idVersion asociados con el identificador corpme`);
                     }
 
-                    // Leer y enviar XML de confirmaciÃ³n
+                    // Leer y enviar XML de confirmación
                     const confirmacionXml = fs.readFileSync(path.join(__dirname, 'xml/corpme_floti_ok.xml'), 'utf8');
                     res.set('Content-Type', 'text/xml');
                     res.send(confirmacionXml);
@@ -1505,8 +1569,8 @@ async function processCorpmeFloti(xmlData, res) {
                     let textoIntermedio;
                     textoIntermedio = 'Desconocido';
                 
-                    const textoTipoRespuesta = informacion && informacion.texto ? informacion.texto[0] : 'Sin informaciÃ³n adicional';
-                    const comentario = `Aviso de redirecciÃ³n: La peticiÃ³n ha sido redirigida a otro Registro. idRespuesta: ${codigoTipoRespuesta} | ${textoIntermedio} | ${textoTipoRespuesta}`;
+                    const textoTipoRespuesta = informacion && informacion.texto ? informacion.texto[0] : 'Sin información adicional';
+                    const comentario = `Aviso de redirección: La petición ha sido redirigida a otro Registro. idRespuesta: ${codigoTipoRespuesta} | ${textoIntermedio} | ${textoTipoRespuesta}`;
                     const idUsuario = "CORPME";
                     const idEstado = 2;
 
@@ -1528,13 +1592,13 @@ async function processCorpmeFloti(xmlData, res) {
                         request.input('comentario', sql.NVarChar(sql.MAX), comentario);
             
                         await request.query(query);
-                        logger.info(`Aviso de redirecciÃ³n: La peticiÃ³n ha sido redirigida a otro Registro. idRespuesta: ${codigoTipoRespuesta} | ${textoIntermedio} | ${textoTipoRespuesta} | idCorpme: ${identificador} | idPeticion: ${idPeticion} | idVersion:${idPeticion}.`);
+                        logger.info(`Aviso de redirección: La petición ha sido redirigida a otro Registro. idRespuesta: ${codigoTipoRespuesta} | ${textoIntermedio} | ${textoTipoRespuesta} | idCorpme: ${identificador} | idPeticion: ${idPeticion} | idVersion:${idPeticion}.`);
                 } else {
                     logger.error('No se encontraron idPeticion o idVersion asociados con el identificador corpme');
                     logger.info(`No se encontraron idPeticion o idVersion asociados con el identificador corpme`);
                 }
 
-                // Enviar confirmaciÃ³n sin el procesamiento del PDF
+                // Enviar confirmación sin el procesamiento del PDF
                 const confirmacionXml = fs.readFileSync(path.join(__dirname, 'xml/corpme_floti_ok.xml'), 'utf8');
                 res.set('Content-Type', 'text/xml');
                 res.send(confirmacionXml);
@@ -1567,8 +1631,8 @@ async function processCorpmeFloti(xmlData, res) {
                         let textoIntermedio;
                         textoIntermedio = 'Desconocido';
                     
-                        const textoTipoRespuesta = informacion && informacion.texto ? informacion.texto[0] : 'Sin informaciÃ³n adicional';
-                        const comentario = `PeticiÃ³n denegada por Registradores: idRespuesta: ${codigoTipoRespuesta} | ${textoIntermedio} | ${textoTipoRespuesta}`;
+                        const textoTipoRespuesta = informacion && informacion.texto ? informacion.texto[0] : 'Sin información adicional';
+                        const comentario = `Petición denegada por Registradores: idRespuesta: ${codigoTipoRespuesta} | ${textoIntermedio} | ${textoTipoRespuesta}`;
                         const idUsuario = "CORPME";
                         const idEstado = 7;
 
@@ -1596,7 +1660,7 @@ async function processCorpmeFloti(xmlData, res) {
                         logger.info(`No se encontraron idPeticion o idVersion asociados con el identificador corpme`);
                     }
 
-                    // Enviar confirmaciÃ³n sin el procesamiento del PDF
+                    // Enviar confirmación sin el procesamiento del PDF
                     const confirmacionXml = fs.readFileSync(path.join(__dirname, 'xml/corpme_floti_ok.xml'), 'utf8');
                     res.set('Content-Type', 'text/xml');
                     res.send(confirmacionXml);
@@ -1625,26 +1689,26 @@ async function processCorpmeFloti(xmlData, res) {
                         let textoIntermedio;
                         switch (codigoTipoRespuesta) {
                             case '20':
-                                textoIntermedio = 'DenegaciÃ³n';
+                                textoIntermedio = 'Denegación';
                                 break;
                             case '21':
-                                textoIntermedio = 'DenegaciÃ³n por inconsistencia de datos';
+                                textoIntermedio = 'Denegación por inconsistencia de datos';
                                 break;
                             case '22':
-                                textoIntermedio = 'DenegaciÃ³n por falta de datos';
+                                textoIntermedio = 'Denegación por falta de datos';
                                 break;
                             case '23':
-                                textoIntermedio = 'DenegaciÃ³n por demasiados titulares coincidentes';
+                                textoIntermedio = 'Denegación por demasiados titulares coincidentes';
                                 break;
                             case '24':
-                                textoIntermedio = 'DenegaciÃ³n por finca inexistente';
+                                textoIntermedio = 'Denegación por finca inexistente';
                                 break;
                             default:
-                                textoIntermedio = 'DenegaciÃ³n';
+                                textoIntermedio = 'Denegación';
                                 break;
                         }
-                        const textoTipoRespuesta = informacion && informacion.texto ? informacion.texto[0] : 'Sin informaciÃ³n adicional';
-                        const comentario = `PeticiÃ³n denegada por Registradores: idRespuesta: ${codigoTipoRespuesta} | ${textoIntermedio} | ${textoTipoRespuesta}`;
+                        const textoTipoRespuesta = informacion && informacion.texto ? informacion.texto[0] : 'Sin información adicional';
+                        const comentario = `Petición denegada por Registradores: idRespuesta: ${codigoTipoRespuesta} | ${textoIntermedio} | ${textoTipoRespuesta}`;
                         //const idUsuario = await getIdUsuarioByIdPeticionAndIdVersion(idPeticion, idVersion);
                         const idUsuario = "CORPME";
                         const idEstado = 4;
@@ -1667,13 +1731,13 @@ async function processCorpmeFloti(xmlData, res) {
                             request.input('comentario', sql.NVarChar(sql.MAX), comentario);
                 
                             await request.query(query);
-                            logger.info(`PeticiÃ³n denegada por Registradores: idRespuesta: ${codigoTipoRespuesta} | ${textoIntermedio} | ${textoTipoRespuesta} | idCorpme: ${identificador} | idPeticion: ${idPeticion} | idVersion:${idVersion}.`);
+                            logger.info(`Petición denegada por Registradores: idRespuesta: ${codigoTipoRespuesta} | ${textoIntermedio} | ${textoTipoRespuesta} | idCorpme: ${identificador} | idPeticion: ${idPeticion} | idVersion:${idVersion}.`);
                     } else {
                         logger.error(`No se encontraron idPeticion ${idPeticion} o idVersion ${idPeticion} asociados con el identificador corpme: ${identificador}`);
                         logger.info(`No se encontraron idPeticion ${idPeticion} o idVersion ${idPeticion} asociados con el identificador corpme: ${identificador}`);
                     }
 
-                    // Enviar confirmaciÃ³n sin el procesamiento del PDF
+                    // Enviar confirmación sin el procesamiento del PDF
                     const confirmacionXml = fs.readFileSync(path.join(__dirname, 'xml/corpme_floti_ok.xml'), 'utf8');
                     res.set('Content-Type', 'text/xml');
                     res.send(confirmacionXml);
@@ -1691,7 +1755,7 @@ async function processCorpmeFloti(xmlData, res) {
     }
 }
 
- // FunciÃ³n para procesar el XML de tipo 'corpme-floti-facturacion' segÃºn recibe los datos
+ // Función para procesar el XML de tipo 'corpme-floti-facturacion' segÃºn recibe los datos
 // async function processCorpmeFlotiFacturacion(xmlData, res) {
 //     const facturacion = xmlData['corpme-floti-facturacion'];
 //     const facturacionData = facturacion.facturacion ? facturacion.facturacion[0] : null;
@@ -1713,18 +1777,18 @@ async function processCorpmeFloti(xmlData, res) {
 //             if (!res.headersSent) res.status(500).send('Error al guardar el archivo XML');
 //             return;
 //         }
-//         logger.info(`Archivo XML de facturaciÃ³n guardado`);
-//         logger.info(`Archivo XML de facturaciÃ³n guardado`);
+//         logger.info(`Archivo XML de facturación guardado`);
+//         logger.info(`Archivo XML de facturación guardado`);
 //     });
 
 //     if (facturacionData) {
 
-//         // Leer y enviar XML de confirmaciÃ³n. Lo pogo aquÃ­ para evita rposibles problemas con el Timeout se Regitradores 
+//         // Leer y enviar XML de confirmación. Lo pogo aquÃ­ para evita rposibles problemas con el Timeout se Regitradores 
 //         const confirmacionXml = fs.readFileSync(path.join(__dirname, 'xml/corpme_floti_ok_fact.xml'), 'utf8');
 //         res.set('Content-Type', 'text/xml');
 //         res.send(confirmacionXml);
 
-//         // Extraer datos principales de facturaciÃ³n
+//         // Extraer datos principales de facturación
 //         const idFactura = facturacion.$['id'];
 //         const idUsuario = facturacionData.$['id'];
 //         const importeBase = facturacionData.$['importe-base'];
@@ -1740,7 +1804,7 @@ async function processCorpmeFloti(xmlData, res) {
 //             // ConexiÃ³n a la base de datos
 //             pool = await sql.connect(config);
 
-//             // Insertar datos en la tabla facturaciÃ³n_factura
+//             // Insertar datos en la tabla facturación_factura
 //             const facturaQuery = `INSERT INTO facturacion_factura ("factura_idFactura", "factura_idUsuario", "factura_importe-base", "factura_importe-impuesto", "factura_periodo-inicio", "factura_periodo-fin")
 //                                 OUTPUT INSERTED.factura_idTabla 
 //                                 VALUES (@id_factura, @id_usuario, @importe_base, @importe_impuesto, @periodo_inicio, @periodo_fin);`;
@@ -1757,7 +1821,7 @@ async function processCorpmeFloti(xmlData, res) {
 
 //             for (let factura of facturacionData.factura) {
 
-//                 // Extraer informaciÃ³n del nodo 'factura'
+//                 // Extraer información del nodo 'factura'
 //                 const ejercicio = factura.$['ejercicio'];
 //                 const fechaFactura = factura.$['fecha'];
 //                 const numeroFactura = factura.$['numero'];
@@ -1809,7 +1873,7 @@ async function processCorpmeFloti(xmlData, res) {
 //                     if (resultCodigo.recordset.length === 1) {
 //                         codigoRegistro = resultCodigo.recordset[0].CodigoRegistro;
 
-//                         // Obtener la descripciÃ³n del emplazamiento
+//                         // Obtener la descripción del emplazamiento
 //                         const descripcionQuery = `
 //                             SELECT Descripcion 
 //                             FROM registros_emplazamiento 
@@ -1822,7 +1886,7 @@ async function processCorpmeFloti(xmlData, res) {
 //                             const Descrip = resultDescripcion.recordset[0].Descripcion;
 //                             descripcionEmplazamiento = `Registro de la Propiedad de ${Descrip}`;
 //                         } else {
-//                             logger.info(`No se encontrÃ³ una descripciÃ³n Ãºnica para CodigoRegistro: ${codigoRegistro}`);
+//                             logger.info(`No se encontrÃ³ una descripción Ãºnica para CodigoRegistro: ${codigoRegistro}`);
 //                         }
 //                     } else {
 //                         logger.info(`No se encontrÃ³ un Ãºnico registro para el NIF: ${emisorNif}`);
@@ -1862,7 +1926,7 @@ async function processCorpmeFloti(xmlData, res) {
 //                 // Iterar sobre todas las peticiones en cada factura
 //                 for (let peticion of peticiones) {
 //                     if (peticion) {
-//                         // Extraer datos de la peticiÃ³n
+//                         // Extraer datos de la petición
 //                         // const grupo = peticion.$['grupo'];
 //                         const idPeticion = peticion.$['id'];
 //                         // const usuario = peticion.$['usuario'];
@@ -1873,7 +1937,7 @@ async function processCorpmeFloti(xmlData, res) {
 //                         const porcentajeImpuesto = peticion.$['porcentaje-impuesto'];
 //                         const referencia = peticion.$['referencia'];
             
-//                         // Insertar datos en la tabla facturaciÃ³n_peticion
+//                         // Insertar datos en la tabla facturación_peticion
 //                         const peticionQuery = `INSERT INTO facturacion_peticion (factura_idTabla, emisor_codigoRegistro, emisor_nif, peticion_idCorpme, "peticion_fecha-peticion", "peticion_fecha-respuesta","peticion_importe-base","peticion_porcentaje-impuesto", peticion_referencia) 
 //                         VALUES (@factura_idTabla, @emisor_codigoRegistro, @emisor_nif, @id_peticion, @fecha, @fecha_respuesta, @importe_base, @porcentaje_impuesto, @referencia);`;
 //                         const requestPeticion  = pool.request();
@@ -1888,20 +1952,20 @@ async function processCorpmeFloti(xmlData, res) {
 //                         requestPeticion.input('referencia', sql.VarChar(50), referencia);
 
 //                         await requestPeticion.query(peticionQuery);
-//                         //logger.info(`InformaciÃ³n de facturaciÃ³n almacenada factura_id: ${IdTabla}`);
+//                         //logger.info(`Información de facturación almacenada factura_id: ${IdTabla}`);
 //                     }
 //                 }
 //             }
 
-//             // Leer y enviar XML de confirmaciÃ³n LO ADELANTO PARA QUE NO HAYA PROBLEMAS CON EL TIMEOUT
+//             // Leer y enviar XML de confirmación LO ADELANTO PARA QUE NO HAYA PROBLEMAS CON EL TIMEOUT
 //             //const confirmacionXml = fs.readFileSync(path.join(__dirname, 'xml/corpme_floti_ok_fact.xml'), 'utf8');
 //             //res.set('Content-Type', 'text/xml');
 //             //res.send(confirmacionXml);
-//             logger.info(`InformaciÃ³n de facturaciÃ³n almacenada factura_id: ${IdTabla}`);
+//             logger.info(`Información de facturación almacenada factura_id: ${IdTabla}`);
 //         } catch (err) {
 //             logger.error('Error al guardar en la base de datos:', err);
-//             logger.info(`Error al guardar los datos de facturaciÃ³n en la base de datos`);
-//             if (!res.headersSent) res.status(500).send('Error al guardar los datos de facturaciÃ³n en la base de datos');
+//             logger.info(`Error al guardar los datos de facturación en la base de datos`);
+//             if (!res.headersSent) res.status(500).send('Error al guardar los datos de facturación en la base de datos');
 //             return;
 //         } finally {
 //             if (pool) {
@@ -1913,7 +1977,7 @@ async function processCorpmeFloti(xmlData, res) {
 //     }
 // }
 
-// FunciÃ³n para procesar el XML de tipo 'corpme-floti-facturacion' desde el archivo grabado
+// Función para procesar el XML de tipo 'corpme-floti-facturacion' desde el archivo grabado
 async function processCorpmeFlotiFacturacion(xmlData, res) {
     // Convertir el objeto JS original a string XML
     const xmlString = builder.buildObject(xmlData);
@@ -1929,7 +1993,7 @@ async function processCorpmeFlotiFacturacion(xmlData, res) {
 
     try {
         await fsp.writeFile(filePath, xmlString, 'utf8');
-        logEscritura(logger, 'XML FacturaciÃ³n', './xml_facturas_recibidas/', fileName);
+        logEscritura(logger, 'XML Facturación', './xml_facturas_recibidas/', fileName);
     } catch (err) {
         logger.error('Error al guardar el archivo XML:', err);
         if (!res.headersSent) res.status(500).send('Error al guardar el archivo XML');
@@ -1955,7 +2019,7 @@ async function processCorpmeFlotiFacturacion(xmlData, res) {
         return;
     }
 
-    // Enviar confirmaciÃ³n inmediatamente para evitar timeout
+    // Enviar confirmación inmediatamente para evitar timeout
     const confirmacionXml = fs.readFileSync(path.join(__dirname, 'xml/corpme_floti_ok_fact.xml'), 'utf8');
     res.set('Content-Type', 'text/xml');
     res.send(confirmacionXml);
@@ -2035,7 +2099,7 @@ async function processCorpmeFlotiFacturacion(xmlData, res) {
                     if (resultDescripcion.recordset.length === 1) {
                         descripcionEmplazamiento = `Registro de la Propiedad de ${resultDescripcion.recordset[0].Descripcion}`;
                     } else {
-                        logger.info(`No se encontrÃ³ una descripciÃ³n Ãºnica para CodigoRegistro: ${codigoRegistro}`);
+                        logger.info(`No se encontrÃ³ una descripción Ãºnica para CodigoRegistro: ${codigoRegistro}`);
                     }
                 } else {
                     logger.info(`No se encontrÃ³ un Ãºnico registro para el NIF: ${emisorNif}`);
@@ -2095,11 +2159,11 @@ async function processCorpmeFlotiFacturacion(xmlData, res) {
             }
         }
 
-        logger.info(`InformaciÃ³n de facturaciÃ³n almacenada factura_id: ${IdTabla}`);
+        logger.info(`Información de facturación almacenada factura_id: ${IdTabla}`);
     } catch (err) {
         logger.error('Error al guardar en la base de datos:', err);
-        logger.info(`Error al guardar los datos de facturaciÃ³n en la base de datos`);
-        if (!res.headersSent) res.status(500).send('Error al guardar los datos de facturaciÃ³n en la base de datos');
+        logger.info(`Error al guardar los datos de facturación en la base de datos`);
+        if (!res.headersSent) res.status(500).send('Error al guardar los datos de facturación en la base de datos');
     } finally {
 
         if (pool) {
@@ -2146,14 +2210,14 @@ app.use((err, req, res, next) => {
         return res.status(413).send({ error: 'La respuesta excediÃ³ el tamaÃ±o permitido.' });
     }
     
-    res.status(err.status || 500).send({ error: 'Hubo un problema procesando la peticiÃ³n.' });
+    res.status(err.status || 500).send({ error: 'Hubo un problema procesando la petición.' });
 });
 
 // Verificar carpetas de escritura al iniciar el servidor
 try {
     verificarCarpetasEscritura(logger);
 } catch (err) {
-    logger.error('Error en verificaciÃ³n de carpetas:', err.message);
+    logger.error('Error en verificación de carpetas:', err.message);
     process.exit(1);
 }
 
@@ -2169,6 +2233,7 @@ httpServer.listen(port, () => {
 
 
 function runFetchPendingRequests() {
+    logger.info("=== Ejecutando ciclo de fetchPendingRequests (setInterval) ===");
     fetchPendingRequests()
         .then(data => {
             if (data) {
@@ -2188,8 +2253,10 @@ function runFetchPendingRequests() {
                 logger.info("No hay solicitudes sin tramitar.");
             }
         })
-        .catch(logger.error);
+        .catch(err => {
+            logger.error('Error en el ciclo de fetchPendingRequests:', err);
+        });
 }
 
-    // Configurar la funciÃ³n para ejecutarse cada 10 minutos (600000 milisegundos)
+    // Configurar la función para ejecutarse cada 10 minutos (600000 milisegundos)
 setInterval(runFetchPendingRequests, 20000);       

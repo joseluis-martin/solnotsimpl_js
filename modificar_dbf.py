@@ -90,7 +90,7 @@ def main():
                 # Convertir IM_SUP_TAS al tipo correcto según el campo destino
                 try:
                     rec["IM_SUP_TAS"] = float(IM_SUP_TAS)
-                except (ValueError, dbf.FieldDataError):
+                except (ValueError, TypeError, dbf.DbfError):
                     rec["IM_SUP_TAS"] = IM_SUP_TAS
 
         # ── Cerrar ambas tablas explícitamente ────────────────────────────────

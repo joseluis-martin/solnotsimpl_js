@@ -7,6 +7,8 @@
 
     <!-- Bootstrap CSS -->
     <link href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 
     <style>
         body {
@@ -24,7 +26,18 @@
             flex-wrap: wrap; /* Permite que se apilen en pantallas pequeñas */
             justify-content: space-between; /* Espacio igual entre los bloques */
         }
- 
+
+        #logs {
+            height: 300px;
+            border: 1px solid #ccc;
+            overflow-y: auto;
+            background-color: #f9f9f9;
+            padding: 10px;
+            white-space: pre-wrap;
+                font-size: 11px;
+        }
+
+
         .logs-container {
             flex: 1; /* Hace que ambos bloques ocupen el mismo ancho */
             min-width: 300px; /* Ancho mínimo para cada bloque */
@@ -33,14 +46,6 @@
             padding: 20px;
             border-radius: 10px;
             box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-        }
-        #logs {
-            height: 300px;
-            border: 1px solid #ccc;
-            overflow-y: auto;
-            background-color: #f9f9f9;
-            padding: 10px;
-            white-space: pre-wrap;
         }
         button {
             margin-top: 10px;
@@ -73,9 +78,6 @@
                 font-size: 1.3em; /* Reduce el tamaño de los encabezados */
             }
 
-            #logs {
-                height: 250px; /* Ajusta la altura del área de logs */
-            }
 
             .pagination button {
                 padding: 8px 12px; /* Botones más compactos */
@@ -92,11 +94,6 @@
 
             .header img {
                 max-width: 150px; /* Reduce el tamaño de la imagen de cabecera */
-            }
-
-            #logs {
-                height: 200px; /* Reduce la altura del área de logs en móviles */
-                font-size: 0.8em; /* Reduce el tamaño de fuente */
             }
 
             .pagination button {
@@ -116,6 +113,12 @@
                 width: 100%;
                 margin-top: 10px;
             }
+        }
+
+        .chart-container {
+            position: relative;
+            height: 250px;
+            margin-bottom: 20px;
         }
     </style>
 </head>
@@ -145,7 +148,11 @@
                 <button id="refreshStats" class="btn btn-primary mt-3">Actualizar Estadísticas</button>
             </div>
         </div>
-
+        <div class="logs-container mb-5">
+            <h3>Generar DBFs pendientes</h3>
+            <button id="processDBFs" class="btn btn-primary mb-3">Generar DBFs</button>
+            <pre id="dbfResults" class="bg-light p-3 border rounded">Esperando para procesar...</pre>
+        </div>
         <div class="logs-container mb-5">
             <div class="form-inline mb-3">
                 <label for="logDate">Seleccionar Fecha:</label>
@@ -154,19 +161,48 @@
             </div>
 
             <h3>Logs Recientes (Página <span id="currentPage">1</span>/<span id="totalPages">1</span>):</h3>
-            <div id="logs" class="bg-light p-3 border rounded">Cargando logs...</div>
+            <div id="logs" class="bg-light p-3 border rounded logs">Cargando logs...</div>
 
             <div class="pagination mt-3">
                 <button id="prevPage" class="btn btn-secondary">Página anterior</button>
                 <button id="nextPage" class="btn btn-secondary">Página siguiente</button>
             </div>
         </div>
-
         <div class="logs-container mb-5">
-            <h3>Generar DBFs pendientes</h3>
-            <button id="processDBFs" class="btn btn-primary mb-3">Generar DBFs</button>
-            <pre id="dbfResults" class="bg-light p-3 border rounded">Esperando para procesar...</pre>
+            <div class="d-flex align-items-center mb-3">
+                <h3 class="mb-0 mr-3">Métricas de los últimos 7 días</h3>
+                <button id="refreshMetrics" class="btn btn-primary btn-sm ml-3">Actualizar Métricas</button>
+            </div>
+            <div class="table-responsive">
+                <table class="table table-bordered table-sm" id="metricsTable">
+                    <thead class="thead-dark">
+                        <tr>
+                            <th>Fecha</th>
+                            <th>Líneas</th>
+                            <th>Errores</th>
+                            <th>Warnings</th>
+                            <th>Python</th>
+                            <th>Pet. Enviadas</th>
+                            <th>Acuses</th>
+                            <th>Pet. OK</th>
+                            <th>Pet. Error</th>
+                            <th>Ciclos Fetch</th>
+                        </tr>
+                    </thead>
+                    <tbody id="metricsBody"></tbody>
+                </table>
+            </div>
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="chart-container"><canvas id="chartLines"></canvas></div>
+                </div>
+                <div class="col-md-6">
+                    <div class="chart-container"><canvas id="chartErrors"></canvas></div>
+                </div>
+            </div>
+            <div class="chart-container"><canvas id="chartPeticiones"></canvas></div>
         </div>
+
 
     </div>
 
@@ -243,6 +279,155 @@
         // Añadir evento al botón para actualizar las estadísticas al hacer clic
         document.getElementById('refreshStats').addEventListener('click', getStats);
 
+        let chartLinesInstance = null;
+        let chartErrorsInstance = null;
+        let chartPeticionesInstance = null;
+
+        function formatDateLabel(dateStr) {
+            const d = new Date(dateStr);
+            return `${d.getDate().toString().padStart(2, '0')}/${(d.getMonth() + 1).toString().padStart(2, '0')}`;
+        }
+
+        async function getLogMetrics() {
+            try {
+                const response = await fetch('/logs/metrics');
+                const data = await response.json();
+                const tbody = document.getElementById('metricsBody');
+                tbody.innerHTML = '';
+
+                const labels = [];
+                const linesData = [];
+                const errorsData = [];
+                const warningsData = [];
+                const peticionesEnviadasData = [];
+                const peticionesOKData = [];
+                const peticionesErrorData = [];
+
+                data.forEach(day => {
+                    const tr = document.createElement('tr');
+
+                    if (!day.exists) {
+                        tr.classList.add('table-secondary');
+                    } else if (day.errors > 0) {
+                        tr.classList.add('table-danger');
+                    }
+
+                    tr.innerHTML = `
+                        <td>${day.date}</td>
+                        <td>${day.exists ? day.totalLines : '-'}</td>
+                        <td>${day.exists ? day.errors : '-'}</td>
+                        <td>${day.exists ? day.warnings : '-'}</td>
+                        <td>${day.exists ? day.pythonExec : '-'}</td>
+                        <td>${day.exists ? day.peticionesEnviadas : '-'}</td>
+                        <td>${day.exists ? day.acusesRecibidos : '-'}</td>
+                        <td>${day.exists ? day.peticionesOK : '-'}</td>
+                        <td>${day.exists ? day.peticionesError : '-'}</td>
+                        <td>${day.exists ? day.ciclosFetch : '-'}</td>
+                    `;
+                    tbody.appendChild(tr);
+
+                    labels.push(formatDateLabel(day.date));
+                    linesData.push(day.exists ? day.totalLines : 0);
+                    errorsData.push(day.exists ? day.errors : 0);
+                    warningsData.push(day.exists ? day.warnings : 0);
+                    peticionesEnviadasData.push(day.exists ? day.peticionesEnviadas : 0);
+                    peticionesOKData.push(day.exists ? day.peticionesOK : 0);
+                    peticionesErrorData.push(day.exists ? day.peticionesError : 0);
+                });
+
+                if (chartLinesInstance) chartLinesInstance.destroy();
+                if (chartErrorsInstance) chartErrorsInstance.destroy();
+                if (chartPeticionesInstance) chartPeticionesInstance.destroy();
+
+                const chartDefaults = {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { position: 'top' } }
+                };
+
+                chartLinesInstance = new Chart(document.getElementById('chartLines'), {
+                    type: 'line',
+                    data: {
+                        labels: labels,
+                        datasets: [{
+                            label: 'Líneas de log',
+                            data: linesData,
+                            borderColor: 'rgba(54, 162, 235, 1)',
+                            backgroundColor: 'rgba(54, 162, 235, 0.1)',
+                            fill: true,
+                            tension: 0.3
+                        }]
+                    },
+                    options: {
+                        ...chartDefaults,
+                        plugins: {
+                            title: { display: true, text: 'Actividad de logs (últimos 7 días)' }
+                        }
+                    }
+                });
+
+                chartErrorsInstance = new Chart(document.getElementById('chartErrors'), {
+                    type: 'bar',
+                    data: {
+                        labels: labels,
+                        datasets: [
+                            {
+                                label: 'Errores',
+                                data: errorsData,
+                                backgroundColor: 'rgba(255, 99, 132, 0.7)'
+                            },
+                            {
+                                label: 'Warnings',
+                                data: warningsData,
+                                backgroundColor: 'rgba(255, 206, 86, 0.7)'
+                            }
+                        ]
+                    },
+                    options: {
+                        ...chartDefaults,
+                        plugins: {
+                            title: { display: true, text: 'Errores y Warnings por día' }
+                        }
+                    }
+                });
+
+                chartPeticionesInstance = new Chart(document.getElementById('chartPeticiones'), {
+                    type: 'bar',
+                    data: {
+                        labels: labels,
+                        datasets: [
+                            {
+                                label: 'Peticiones Enviadas',
+                                data: peticionesEnviadasData,
+                                backgroundColor: 'rgba(75, 192, 192, 0.7)'
+                            },
+                            {
+                                label: 'Peticiones OK',
+                                data: peticionesOKData,
+                                backgroundColor: 'rgba(54, 162, 235, 0.7)'
+                            },
+                            {
+                                label: 'Peticiones Error',
+                                data: peticionesErrorData,
+                                backgroundColor: 'rgba(255, 99, 132, 0.7)'
+                            }
+                        ]
+                    },
+                    options: {
+                        ...chartDefaults,
+                        plugins: {
+                            title: { display: true, text: 'Peticiones por día' }
+                        }
+                    }
+                });
+
+            } catch (error) {
+                console.error('Error al obtener métricas:', error);
+            }
+        }
+
+        document.getElementById('refreshMetrics').addEventListener('click', getLogMetrics);
+
         //document.getElementById('stopServer').addEventListener('click', stopServer);
         //document.getElementById('restartServer').addEventListener('click', restartServer);
 
@@ -265,6 +450,7 @@
         getStatus();
         getLogs(currentPage, currentDate);
         getStats();
+        getLogMetrics();
 
         // Generación de los dbfs pendientes
         document.getElementById('processDBFs').addEventListener('click', async () => {

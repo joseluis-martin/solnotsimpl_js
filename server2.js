@@ -24,7 +24,7 @@ const upload = multer({ dest: 'uploads/' });
 // Variables de entorno
 const url = process.env.XML_URL;
 const port = process.env.PORT;
-const logFilePath = './logs/actions.log';
+
 
 const CREDENCIALES = {
     ENTIDAD: process.env.ENTIDAD,
@@ -99,25 +99,21 @@ app.get('/status', (req, res) => {
 app.get('/logs', (req, res) => {
     const page = parseInt(req.query.page) || 1;
     const linesPerPage = parseInt(req.query.limit) || 100;
+
     const requestedDate = req.query.date ? moment(req.query.date, 'YYYY-MM-DD') : moment();
 
     if (!requestedDate.isValid()) {
-        return res.status(400).send('Formato de fecha inválido (YYYY-MM-DD).');
+        return res.status(400).send('Formato de fecha inválido. Utilice el formato YYYY-MM-DD.');
     }
+
+    const logFileName = `app_${requestedDate.format('DD_MM_YYYY')}.log`;
+    const logFilePath = path.join(__dirname, 'logs', logFileName);
 
     try {
         const logContent = fs.readFileSync(logFilePath, 'utf8');
         const logLines = logContent.split('\n').filter(Boolean);
-        const logsForDate = logLines.filter(line => {
-            const timestamp = line.match(/\[(.*?)\]/);
-            if (timestamp) {
-                const logDate = moment(timestamp[1], 'YYYY-MM-DDTHH:mm:ss');
-                return logDate.isSame(requestedDate, 'day');
-            }
-            return false;
-        });
 
-        const totalLines = logsForDate.length;
+        const totalLines = logLines.length;
         const totalPages = Math.ceil(totalLines / linesPerPage);
 
         if (totalLines === 0) {
@@ -136,7 +132,8 @@ app.get('/logs', (req, res) => {
 
         const startLine = (page - 1) * linesPerPage;
         const endLine = Math.min(startLine + linesPerPage, totalLines);
-        const logsToShow = logsForDate.slice(startLine, endLine).join('\n');
+
+        const logsToShow = logLines.slice(startLine, endLine).join('\n');
 
         res.json({
             page: page,
@@ -145,9 +142,80 @@ app.get('/logs', (req, res) => {
             date: requestedDate.format('YYYY-MM-DD')
         });
     } catch (error) {
-        console.error(`Error al leer logs: ${error.message}`);
+        if (error.code === 'ENOENT') {
+            return res.json({
+                page: 1,
+                totalPages: 1,
+                logs: null,
+                date: requestedDate.format('YYYY-MM-DD'),
+                message: 'No hay registros disponibles en esta fecha'
+            });
+        }
+        console.error(`Error al leer el archivo de logs: ${error.message}`);
         res.status(500).send('Error al leer el archivo de logs');
     }
+});
+
+// Ruta para métricas de logs de los últimos 7 días
+app.get('/logs/metrics', (req, res) => {
+    const metrics = [];
+
+    for (let i = 6; i >= 0; i--) {
+        const date = moment().subtract(i, 'days');
+        const logFileName = `app_${date.format('DD_MM_YYYY')}.log`;
+        const logFilePath = path.join(__dirname, 'logs', logFileName);
+
+        let exists = false;
+        let totalLines = 0;
+        let errors = 0;
+        let warnings = 0;
+        let pythonExec = 0;
+        let peticionesEnviadas = 0;
+        let acusesRecibidos = 0;
+        let peticionesOK = 0;
+        let peticionesError = 0;
+        let ciclosFetch = 0;
+
+        try {
+            const content = fs.readFileSync(logFilePath, 'utf8');
+            const lines = content.split('\n').filter(Boolean);
+            exists = true;
+            totalLines = lines.length;
+
+            for (const line of lines) {
+                try {
+                    const entry = JSON.parse(line);
+                    const level = entry.level || 0;
+                    const msg = entry.msg || '';
+
+                    if (level >= 50) errors++;
+                    if (level === 40) warnings++;
+                    if (msg.includes('[PYTHON]')) pythonExec++;
+                    if (/Solicitud.*lanzada.*y acuse recibido/.test(msg)) peticionesEnviadas++;
+                    if (msg.includes('Escribiendo archivo Acuse XML')) acusesRecibidos++;
+                    if (msg.includes('Estado actualizado a 2')) peticionesOK++;
+                    if (/Estado actualizado a [347]/.test(msg)) peticionesError++;
+                    if (msg.includes('Ejecutando ciclo de fetchPendingRequests')) ciclosFetch++;
+                } catch (e) { /* línea no es JSON válido */ }
+            }
+        } catch (e) { /* archivo no existe */ }
+
+        metrics.push({
+            date: date.format('YYYY-MM-DD'),
+            totalLines,
+            errors,
+            warnings,
+            pythonExec,
+            peticionesEnviadas,
+            acusesRecibidos,
+            peticionesOK,
+            peticionesError,
+            ciclosFetch,
+            exists
+        });
+    }
+
+    res.json(metrics);
 });
 
 app.get('/stats', async (req, res) => {
@@ -1324,6 +1392,8 @@ connectDB().then(() => {
 
 // 14) Tareas programadas
 function runFetchPendingRequests() {
+    console.log("=== Ejecutando ciclo de fetchPendingRequests (setInterval) ===");
+
     fetchPendingRequests()
         .then(data => {
             if (!data) return;

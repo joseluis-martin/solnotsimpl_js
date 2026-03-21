@@ -78,22 +78,22 @@ const formatConsoleLog = (level, msg) => {
 
 logger.info = (msg, ...args) => {
     origInfo(msg, ...args);
-    process.stdout.write(formatConsoleLog(30, msg) + '\n');
+    process.stdout.write(formatConsoleLog(30, msg));
 };
 
 logger.error = (msg, ...args) => {
     origError(msg, ...args);
-    process.stdout.write(formatConsoleLog(50, msg) + '\n');
+    process.stdout.write(formatConsoleLog(50, msg));
 };
 
 logger.warn = (msg, ...args) => {
     origWarn(msg, ...args);
-    process.stdout.write(formatConsoleLog(40, msg) + '\n');
+    process.stdout.write(formatConsoleLog(40, msg));
 };
 
 logger.debug = (msg, ...args) => {
     origDebug(msg, ...args);
-    process.stdout.write(formatConsoleLog(20, msg) + '\n');
+    process.stdout.write(formatConsoleLog(20, msg));
 };
 
 module.exports = logger;

@@ -1262,21 +1262,12 @@ app.get('/stats', async (req, res) => {
 // Ruta para DBFs no generados
 app.get('/procesar-peticiones-dbfs', async (req, res) => {
     try {
+        logger.info(`registradores_peticiones_pendientes ejecutando ...`);
+
         await sql.connect(config);
         
         // Consulta SQL para obtener solo las primeras 10 peticiones pendientes
-        const query = `
-            SELECT TOP 5 T1.idDocumento, T1.idPeticion, T1.idVersion
-            FROM tasadores.notassimples.peticiones T1
-            WHERE T1.idRespuesta='1' AND T1.idEstado='5'
-            AND T1.idDocumento >= 18060
-            AND NOT EXISTS (
-                SELECT NULL 
-                FROM tasadores.notassimples.peticiones_dbf T2 
-                WHERE T1.idDocumento = T2.idDocumento
-            )
-            ORDER BY T1.idDocumento
-        `;
+        const query = `EXEC notassimples.registradores_peticiones_pendientes`;
         
         const result = await sql.query(query);
         const peticiones = result.recordset;
@@ -1285,6 +1276,7 @@ app.get('/procesar-peticiones-dbfs', async (req, res) => {
             res.status(200).send('No hay peticiones pendientes para procesar.');
             return;
         }
+        logger.info(`registradores_peticiones_pendientes ejecutado con éxito ... ${peticiones.length} peticiones`);
 
         // Iterar sobre los primeros 10 registros y ejecutar modificarDBFConPython
         for (const peticion of peticiones) {
@@ -2233,7 +2225,7 @@ httpServer.listen(port, () => {
 
 
 function runFetchPendingRequests() {
-    logger.info("=== Ejecutando ciclo de fetchPendingRequests (setInterval) ===");
+    // logger.info("=== Ejecutando ciclo de fetchPendingRequests (setInterval) ===");
     fetchPendingRequests()
         .then(data => {
             if (data) {

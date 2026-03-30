@@ -1392,7 +1392,7 @@ connectDB().then(() => {
 
 // 14) Tareas programadas
 function runFetchPendingRequests() {
-    console.log("=== Ejecutando ciclo de fetchPendingRequests (setInterval) ===");
+    //console.log("=== Ejecutando ciclo de fetchPendingRequests (setInterval) ===");
 
     fetchPendingRequests()
         .then(data => {

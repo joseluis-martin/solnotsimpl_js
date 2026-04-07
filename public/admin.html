@@ -154,6 +154,12 @@
             <pre id="dbfResults" class="bg-light p-3 border rounded">Esperando para procesar...</pre>
         </div>
         <div class="logs-container mb-5">
+            <h3>Enviar XML al servidor</h3>
+            <textarea id="spntsXml" class="form-control mb-2" rows="8" placeholder="Pega aquí el XML..."></textarea>
+            <button id="sendSpnts" class="btn btn-primary">Enviar</button>
+            <pre id="spntsResult" class="bg-light p-3 border rounded mt-2" style="min-height:40px;white-space:pre-wrap;"></pre>
+        </div>
+        <div class="logs-container mb-5">
             <div class="form-inline mb-3">
                 <label for="logDate">Seleccionar Fecha:</label>
                 <input type="date" id="logDate" class="form-control ml-2" value="" />
@@ -430,6 +436,24 @@
 
         //document.getElementById('stopServer').addEventListener('click', stopServer);
         //document.getElementById('restartServer').addEventListener('click', restartServer);
+
+        document.getElementById('sendSpnts').addEventListener('click', async () => {
+            const xml = document.getElementById('spntsXml').value.trim();
+            const result = document.getElementById('spntsResult');
+            if (!xml) { result.textContent = 'Introduce XML antes de enviar.'; return; }
+            result.textContent = 'Enviando...';
+            try {
+                const response = await fetch('/spnts', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'text/xml' },
+                    body: xml
+                });
+                const text = await response.text();
+                result.textContent = `[${response.status}] ${text}`;
+            } catch (error) {
+                result.textContent = `Error: ${error.message}`;
+            }
+        });
 
         // Navegación de la paginación de los logs
         document.getElementById('prevPage').addEventListener('click', () => {

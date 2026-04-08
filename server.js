@@ -10,7 +10,7 @@ const multer = require('multer');
 const xml2js = require('xml2js');
 const builder = new xml2js.Builder();
 const axios = require('axios');
-const xmlparser = require('express-xml-bodyparser');
+const bodyParser = require('body-parser');
 const pdf = require('pdf-parse');
 const app = express();
 const upload = multer({ dest: 'uploads/' });
@@ -43,7 +43,20 @@ const CREDENCIALES = {
 
 app.use(express.json({ limit: '100mb' }));
 app.use(express.urlencoded({ limit: '100mb', extended: true }));
-app.use(xmlparser({ limit: '100mb' }))
+app.use((req, res, next) => {
+    const contentType = req.headers['content-type'] || '';
+    if (!contentType.includes('xml')) return next();
+    bodyParser.raw({ type: '*/*', limit: '100mb' })(req, res, (err) => {
+        if (err) return next(err);
+        if (!req.body || !Buffer.isBuffer(req.body)) return next();
+        const xmlString = req.body.toString('utf8');
+        xml2js.parseString(xmlString, { explicitArray: true }, (parseErr, result) => {
+            if (parseErr) return next(parseErr);
+            req.body = result;
+            next();
+        });
+    });
+});
 
 
 // Servir archivos estÃ¡ticos (HTML, CSS, JS, etc.)
@@ -1849,7 +1862,7 @@ async function processCorpmeFloti(xmlData, res) {
 
 //                 // Verificar si hay un valor Ãºnico en la tabla registros_emisor
 //                 let codigoRegistro = 0;
-//                 let descripcionEmplazamiento = 'No hay datos o hay mÃ¡s de un registro';
+//                 let descripcionEmplazamiento = 'No hay datos o hay mas de un registro';
 
 //                 if (emisorNif) {
 //                     const codigoRegistroQuery = `
@@ -2064,7 +2077,7 @@ async function processCorpmeFlotiFacturacion(xmlData, res) {
             const peticionIrpf = importe['irpf'];
 
             let codigoRegistro = 0;
-            let descripcionEmplazamiento = 'No hay datos o hay mÃ¡s de un registro';
+            let descripcionEmplazamiento = 'No hay datos o hay más de un registro';
 
             if (emisorNif) {
                 const codigoRegistroQuery = `

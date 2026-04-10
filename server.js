@@ -25,7 +25,7 @@ require('dotenv').config();
 const url = process.env.XML_URL;
 const port = process.env.PORT;
 const instance = axios.create({
-    httpsAgent: new https.Agent({  
+    httpsAgent: new https.Agent({
         rejectUnauthorized: false // Desactiva la validación de certificados
     }),
     retry: 0, // Sin reintentos
@@ -60,7 +60,7 @@ app.use((req, res, next) => {
 
 
 // Servir archivos estÃ¡ticos (HTML, CSS, JS, etc.)
-app.use(express.static('public')); 
+app.use(express.static('public'));
 
 // Configuración para acceder a la BBDD de tasadores
 const config = {
@@ -96,7 +96,7 @@ async function modificarDBFConPython(idPeticion, idVersion) {
         }
 
         // Extraer valores necesarios para la llamada al script Python
-        const { IM_ANO_CLA, IM_NUM_TAS, IM_SUP_TAS, IMAGEN, NombreArchivo} = dbfData;
+        const { IM_ANO_CLA, IM_NUM_TAS, IM_SUP_TAS, IMAGEN, NombreArchivo } = dbfData;
 
         const queryidDocumento = `
             SELECT notassimples.peticiones_get_idDocumento(@idPeticion, @idVersion) AS idDocumento
@@ -105,7 +105,7 @@ async function modificarDBFConPython(idPeticion, idVersion) {
         const idDocumentoRequest = new sql.Request();
         idDocumentoRequest.input('idPeticion', sql.Int, idPeticion);
         idDocumentoRequest.input('idVersion', sql.SmallInt, idVersion);
-        
+
         // Ejecutar la consulta correctamente con el nombre del objeto adecuado
         const queryidDocumentoResult = await idDocumentoRequest.query(queryidDocumento);
         const idDocumento = queryidDocumentoResult.recordset[0].idDocumento;
@@ -114,18 +114,18 @@ async function modificarDBFConPython(idPeticion, idVersion) {
         //logger.info(IM_ANO_CLA, IM_NUM_TAS, IM_SUP_TAS, IMAGEN, idDocumento);
 
         // Llamar al script Python y pasar los argumentos
-        exec(`python3 modificar_dbf.py ${IM_ANO_CLA} ${IM_NUM_TAS} ${IM_SUP_TAS} ${IMAGEN} ${NombreArchivoDoc}`, 
+        exec(`python3 modificar_dbf.py ${IM_ANO_CLA} ${IM_NUM_TAS} ${IM_SUP_TAS} ${IMAGEN} ${NombreArchivoDoc}`,
             (error, stdout, stderr) => {
-            if (error) {
-                logger.error(`Error al ejecutar el script de Python: ${error.message}`);
-                return;
-            }
-            if (stderr) {
-                logger.error(`stderr de Python: ${stderr}`);
-                return;
-            }
-            logger.info(`Salida del script Python: ${stdout}`);
-        });
+                if (error) {
+                    logger.error(`Error al ejecutar el script de Python: ${error.message}`);
+                    return;
+                }
+                if (stderr) {
+                    logger.error(`stderr de Python: ${stderr}`);
+                    return;
+                }
+                logger.info(`Salida del script Python: ${stdout}`);
+            });
 
         // Llamada al procedimiento almacenado notassimples.peticiones_peticion_dbf_insert en un bloque try-catch separado
         try {
@@ -150,12 +150,12 @@ async function modificarDBFConPython(idPeticion, idVersion) {
         try {
             const comentario = `Generación del archivo DBF: ${NombreArchivo}`;
             const historiaRequest = new sql.Request();
-        
+
 
             historiaRequest.input('idPeticion', sql.Int, idPeticion);
             historiaRequest.input('idVersion', sql.SmallInt, idVersion);
             historiaRequest.input('idUsuario', sql.VarChar(20), 'SRVREG'); // Ajusta este valor si es necesario
-            historiaRequest.input('idEstado', sql.TinyInt, 5); 
+            historiaRequest.input('idEstado', sql.TinyInt, 5);
             historiaRequest.input('comentario', sql.NVarChar(sql.MAX), comentario);
 
             await historiaRequest.query(`
@@ -229,7 +229,7 @@ async function extractCodesFromPdf(pdfBuffer) {
         const csvRegex = /C\.?S\.?V\.?\s*:\s*([A-Za-z0-9]+)/i;
         const huellaRegex = /Huella\s*:\s*([a-f0-9\-]+)/i;
 
-        // Buscar los cÃ³digos CSV y Huella en el texto
+        // Buscar los códigos CSV y Huella en el texto
         const csvMatch = pdfText.match(csvRegex);
         const huellaMatch = pdfText.match(huellaRegex);
 
@@ -256,11 +256,11 @@ async function fetchPendingRequests() {
         await sql.connect(config);
         // idEstado = 1 Pendiente de petición
         const peticiones = await sql.query`SELECT idPeticion, idVersion, idUsuario FROM peticiones WHERE idEstado = 1`;
-       // Recorrer cada petición encontrada
+        // Recorrer cada petición encontrada
         for (let i = 0; i < peticiones.recordset.length; i++) {
             const idPeticion = peticiones.recordset[i].idPeticion;
-            const idVersion =  peticiones.recordset[i].idVersion;
-            const idUsuario =  peticiones.recordset[i].idUsuario;
+            const idVersion = peticiones.recordset[i].idVersion;
+            const idUsuario = peticiones.recordset[i].idUsuario;
 
             const datosSolicitud = await sql.query`SELECT * FROM datosSolicitud WHERE idPeticion = ${idPeticion} AND idVersion = ${idVersion}`;
 
@@ -304,14 +304,14 @@ async function fetchPendingRequests() {
         // Recorrer cada petición encontrada
         for (let i = 0; i < peticionesReenvio.recordset.length; i++) {
             const idPeticion = peticionesReenvio.recordset[i].idPeticion;
-            const idVersion =  peticionesReenvio.recordset[i].idVersion;
-            const idCorpme =  peticionesReenvio.recordset[i].idCorpme;
+            const idVersion = peticionesReenvio.recordset[i].idVersion;
+            const idCorpme = peticionesReenvio.recordset[i].idCorpme;
             resultadosReenvio.push({
                 idCorpme: idCorpme,  // Asumiendo que idCorpme estÃ¡ en la tabla peticiones
                 idPeticion: idPeticion,
                 idVersion: idVersion,
             });
-           
+
         }
 
         // Verificar si se encontraron resultados
@@ -325,7 +325,7 @@ async function fetchPendingRequests() {
         if (resultadosTitular.length > 0) {
             logger.info(`Resultados de titulares encontrados: ${resultadosTitular}`);
         } else {
-           // logger.info("No se encontraron registros válidos para titulares o el idTipoSolicitud no es 1.");
+            // logger.info("No se encontraron registros válidos para titulares o el idTipoSolicitud no es 1.");
         }
 
         if (resultadosIDUFIR.length > 0) {
@@ -339,13 +339,13 @@ async function fetchPendingRequests() {
         } else {
             //logger.info("No se encontraron registros válidos para IDUFIR o el idTipoSolicitud no es 3.");
         }
-            return { resultadosTitular, resultadosIDUFIR, resultadosFinca, resultadosReenvio };  // Devolver todos los arrays de resultados
+        return { resultadosTitular, resultadosIDUFIR, resultadosFinca, resultadosReenvio };  // Devolver todos los arrays de resultados
     } catch (err) {
         logger.error('Error en la base de datos en fetchPendingRequests:', err);
         logger.info(`Error en la base de datos en fetchPendingRequests : ${err.message}`);
         throw err;  // Lanzar el error
     } finally {
-        await sql.close();  // Asegurar que la conexiÃ³n se cierre
+        await sql.close();  // Asegurar que la conexión se cierre
     }
 }
 
@@ -362,7 +362,7 @@ async function sendXMLxTitular(resultados) {
             parsedXml['corpme-floti'].peticiones[0].credenciales[0].entidad[0] = CREDENCIALES.ENTIDAD;
             parsedXml['corpme-floti'].peticiones[0].credenciales[0].grupo[0] = CREDENCIALES.GRUPO;
             parsedXml['corpme-floti'].peticiones[0].credenciales[0].usuario[0] = CREDENCIALES.USUARIO;
-            
+
             //parsedXml['corpme-floti'].peticiones[0].credenciales[0].email[0] = CREDENCIALES.EMAIL;
 
             // Obtener email del usuario de la base de datos con la función  usar valor predeterminado
@@ -371,7 +371,7 @@ async function sendXMLxTitular(resultados) {
                 SELECT notassimples.get_email_usuario(${idUsuario}) AS email
             `;
 
-            // Asignar el correo electrÃ³nico, o valor predeterminado si es nulo
+            // Asignar el correo electrónico, o valor predeterminado si es nulo
             parsedXml['corpme-floti'].peticiones[0].credenciales[0].email[0] = result.recordset[0]?.email || 'joseluis.martin@uah.es';
 
             parsedXml['corpme-floti'].peticiones[0].peticion[0].titular[0].nif[0] = nifTitular;
@@ -415,13 +415,13 @@ async function sendXMLxTitular(resultados) {
             if (error.code === 'ECONNABORTED') {
                 logger.error('Timeout: La solicitud fue abortada debido a un exceso de tiempo de espera para el ID:', idPeticion, 'version:', idVersion);
             } else if (error.response) {
-                // El servidor respondiÃ³ con un cÃ³digo de estado fuera del rango 2xx
-                logger.error('Error de respuesta del servidor para ID:', idPeticion, 'version:', idVersion, 'CÃ³digo de estado:', error.response.status);
+                // El servidor respondió con un código de estado fuera del rango 2xx
+                logger.error('Error de respuesta del servidor para ID:', idPeticion, 'version:', idVersion, 'Código de estado:', error.response.status);
             } else if (error.request) {
-                // La solicitud fue hecha pero no se recibiÃ³ respuesta
-                logger.error('No se recibiÃ³ respuesta para la solicitud del ID:', idPeticion, 'version:', idVersion);
+                // La solicitud fue hecha pero no se recibió respuesta
+                logger.error('No se recibió respuesta para la solicitud del ID:', idPeticion, 'version:', idVersion);
             } else {
-                // Algo ocurriÃ³ al configurar la solicitud que disparÃ³ un error
+                // Algo ocurrió al configurar la solicitud que disparó un error
                 logger.error('Error configurando la solicitud para ID:', idPeticion, 'version:', idVersion);
             }
             logger.error('Información del error:', error.message);  // Mensaje general del error
@@ -443,7 +443,7 @@ async function sendXMLxIDUFIR(resultados) {
             parsedXml['corpme-floti'].peticiones[0].credenciales[0].entidad[0] = CREDENCIALES.ENTIDAD;
             parsedXml['corpme-floti'].peticiones[0].credenciales[0].grupo[0] = CREDENCIALES.GRUPO;
             parsedXml['corpme-floti'].peticiones[0].credenciales[0].usuario[0] = CREDENCIALES.USUARIO;
- 
+
             //parsedXml['corpme-floti'].peticiones[0].credenciales[0].email[0] = CREDENCIALES.EMAIL;
 
             // Obtener email del usuario de la base de datos con la función  usar valor predeterminado
@@ -452,13 +452,13 @@ async function sendXMLxIDUFIR(resultados) {
                 SELECT notassimples.get_email_usuario(${idUsuario}) AS email
             `;
 
-            // Asignar el correo electrÃ³nico, o valor predeterminado si es nulo
+            // Asignar el correo electrónico, o valor predeterminado si es nulo
             parsedXml['corpme-floti'].peticiones[0].credenciales[0].email[0] = result.recordset[0]?.email || 'joseluis.martin@uah.es';
 
             parsedXml['corpme-floti'].peticiones[0].peticion[0].idufir[0] = IDUFIR;
             parsedXml['corpme-floti'].peticiones[0].peticion[0].observaciones[0] = observaciones;
             parsedXml['corpme-floti'].peticiones[0].peticion[0].referencia = `RF_${idPeticion}_${idVersion}`;
-   
+
             const newXml = builder.buildObject(parsedXml);
 
             const xmlFile2 = `peticion_x_idufir_${idPeticion}_${idVersion}.xml`;
@@ -496,9 +496,9 @@ async function sendXMLxIDUFIR(resultados) {
             if (error.code === 'ECONNABORTED') {
                 logger.error('Timeout: La solicitud fue abortada debido a un exceso de tiempo de espera para el ID:', idPeticion, 'version:', idVersion);
             } else if (error.response) {
-                logger.error('Error de respuesta del servidor para ID:', idPeticion, 'version:', idVersion, 'CÃ³digo de estado:', error.response.status);
+                logger.error('Error de respuesta del servidor para ID:', idPeticion, 'version:', idVersion, 'Código de estado:', error.response.status);
             } else if (error.request) {
-                logger.error('No se recibiÃ³ respuesta para la solicitud del ID:', idPeticion, 'version:', idVersion);
+                logger.error('No se recibió respuesta para la solicitud del ID:', idPeticion, 'version:', idVersion);
             } else {
                 logger.error('Error configurando la solicitud para ID:', idPeticion, 'version:', idVersion);
             }
@@ -528,7 +528,7 @@ async function sendXMLxFinca(resultados) {
                 SELECT notassimples.get_email_usuario(${idUsuario}) AS email
             `;
 
-            // Asignar el correo electrÃ³nico, o valor predeterminado si es nulo
+            // Asignar el correo electrónico, o valor predeterminado si es nulo
             parsedXml['corpme-floti'].peticiones[0].credenciales[0].email[0] = result.recordset[0]?.email || 'joseluis.martin@uah.es';
 
             // Convertir los valores a enteros antes de asignarlos
@@ -536,7 +536,7 @@ async function sendXMLxFinca(resultados) {
             parsedXml['corpme-floti'].peticiones[0].peticion[0]['datos-registrales'][0].municipio[0] = parseInt(municipio, 10);
             parsedXml['corpme-floti'].peticiones[0].peticion[0]['datos-registrales'][0].provincia[0] = parseInt(provincia, 10);
             parsedXml['corpme-floti'].peticiones[0].peticion[0]['datos-registrales'][0].seccion[0] = parseInt(seccion, 10);
-                        
+
             // Procesar la variable 'finca' para separar finca y subfinca si es necesario
             let fincaValue, subfincaValue;
 
@@ -556,7 +556,7 @@ async function sendXMLxFinca(resultados) {
             if (subfincaValue) {
                 parsedXml['corpme-floti'].peticiones[0].peticion[0]['datos-registrales'][0].subfinca = [subfincaValue];
             }
-            
+
             parsedXml['corpme-floti'].peticiones[0].peticion[0].observaciones[0] = observaciones;
             parsedXml['corpme-floti'].peticiones[0].peticion[0].referencia = `RF_${idPeticion}_${idVersion}`;
 
@@ -581,7 +581,7 @@ async function sendXMLxFinca(resultados) {
             const response = await instance(options);
             if (response.data) {
                 logger.info(`Solicitud lanÃ§ada a ${url} x Finca y acuse recibido ok para idPeticion ${idPeticion} y version ${idVersion}`);
-                
+
                 const now = new Date();
                 const timestamp = `${now.getHours()}-${now.getMinutes()}-${now.getSeconds()}-${now.getMilliseconds()}`;
 
@@ -597,9 +597,9 @@ async function sendXMLxFinca(resultados) {
             if (error.code === 'ECONNABORTED') {
                 logger.error('Timeout: La solicitud fue abortada debido a un exceso de tiempo de espera para el ID:', idPeticion, 'version:', idVersion);
             } else if (error.response) {
-                logger.error('Error de respuesta del servidor para ID:', idPeticion, 'version:', idVersion, 'CÃ³digo de estado:', error.response.status);
+                logger.error('Error de respuesta del servidor para ID:', idPeticion, 'version:', idVersion, 'Código de estado:', error.response.status);
             } else if (error.request) {
-                logger.error('No se recibiÃ³ respuesta para la solicitud del ID:', idPeticion, 'version:', idVersion);
+                logger.error('No se recibió respuesta para la solicitud del ID:', idPeticion, 'version:', idVersion);
             } else {
                 logger.error('Error configurando la solicitud para ID:', idPeticion, 'version:', idVersion);
             }
@@ -613,7 +613,7 @@ async function sendXMLReenvio(resultados) {
     for (let data of resultados) {
         const { idCorpme, idPeticion, idVersion } = data;
         const xmlTemplate = fs.readFileSync('./xml/plantilla_reenvio.xml', 'utf-8');
-        
+
         try {
             const parsedXml = await xml2js.parseStringPromise(xmlTemplate);
             parsedXml['corpme-floti'].reenvio[0].identificador[0] = idCorpme;
@@ -647,7 +647,7 @@ async function sendXMLReenvio(resultados) {
                     await processReenvioCorpmeFloti(receiptXml, idPeticion, idVersion);
                 }
                 // Si no existe "respuesta" pero sÃ­ existe el nodo "error", se procesa como error
-                else if ( receiptXml &&  receiptXml['corpme-floti'] && receiptXml['corpme-floti'].error &&  receiptXml['corpme-floti'].error.length > 0) {
+                else if (receiptXml && receiptXml['corpme-floti'] && receiptXml['corpme-floti'].error && receiptXml['corpme-floti'].error.length > 0) {
                     const errorNode = receiptXml['corpme-floti'].error[0];
                     const codigoError = errorNode['$'] && errorNode['$'].codigo ? errorNode['$'].codigo : null;
                     const errorText = errorNode['_'] || 'Sin información adicional';
@@ -664,13 +664,13 @@ async function sendXMLReenvio(resultados) {
                         requestUpdateXml.input('idVersion', sql.SmallInt, idVersion);
                         await requestUpdateXml.query(queryUpdateXml);
 
-                    
-                        // Actualizar la petición asignando el estado 7 y registrando el cÃ³digo de error
+
+                        // Actualizar la petición asignando el estado 7 y registrando el código de error
                         const query = `UPDATE peticiones SET IdEstado = 7, idRespuesta = @codigoError WHERE idCorpme = @idCorpme AND idPeticion = @idPeticion AND idVersion = @idVersion`;
                         const request = new sql.Request();
                         request.input('codigoError', sql.Int, codigoError);
                         request.input('idCorpme', sql.VarChar(50), idCorpme);
-                        request.input('idPeticion',sql.Int, idPeticion);
+                        request.input('idPeticion', sql.Int, idPeticion);
                         request.input('idVersion', sql.SmallInt, idVersion);
                         await request.query(query);
 
@@ -704,9 +704,9 @@ async function sendXMLReenvio(resultados) {
             if (error.code === 'ECONNABORTED') {
                 logger.error('Timeout: La solicitud fue abortada debido a un exceso de tiempo de espera para el ID:', idPeticion, 'version:', idVersion);
             } else if (error.response) {
-                logger.error('Error de respuesta del servidor para ID:', idPeticion, 'version:', idVersion, 'CÃ³digo de estado:', error.response.status);
+                logger.error('Error de respuesta del servidor para ID:', idPeticion, 'version:', idVersion, 'Código de estado:', error.response.status);
             } else if (error.request) {
-                logger.error('No se recibiÃ³ respuesta para la solicitud del ID:', idPeticion, 'version:', idVersion);
+                logger.error('No se recibió respuesta para la solicitud del ID:', idPeticion, 'version:', idVersion);
             } else {
                 logger.error('Error configurando la solicitud para ID:', idPeticion, 'version:', idVersion);
             }
@@ -726,7 +726,7 @@ async function handleReceipt(receipt, idPeticion, idVersion) {
         // Se conecta a la base de datos para obtener el idUsuario de la tabla 'peticiones'
         await sql.connect(config);
         const result = await sql.query`SELECT idUsuario FROM peticiones WHERE idPeticion = ${idPeticion} AND idVersion = ${idVersion}`;
-        
+
         if (result.recordset.length > 0) {
             idUsuario = "CORPME";
         } else {
@@ -736,48 +736,42 @@ async function handleReceipt(receipt, idPeticion, idVersion) {
 
         // Se verifica si la respuesta general contiene un error
         if (receipt && receipt['corpme-floti'] && receipt['corpme-floti'].error) {
-            // Se extrae el cÃ³digo de error
+            // Se extrae el código de error
             const codigo = receipt['corpme-floti'].error[0]['$'].codigo;
             logger.info("codigo,", codigo);
             const mensaje = receipt['corpme-floti'].error[0]['_'];
-            logger.error(`Error general en el XML recibido para ID ${idPeticion} ${idVersion}: ${mensaje} (CÃ³digo ${codigo})`);
-            logger.info(`Error general en el XML recibido para ID ${idPeticion} ${idVersion}: ${mensaje} (CÃ³digo ${codigo})`);
-
+            logger.error(`Error general en el XML recibido para ID ${idPeticion} ${idVersion}: ${mensaje} (Código ${codigo})`);
             idEstado = 3; // Se cambia el estado a 3 (indica error)
             comentario = `Petición recibida por Registradores KO: idError: ${codigo} | ${mensaje}`;
 
-            // Se Conecta a la base de datos y se actualiza el estado y el cÃ³digo de error
+            // Se Conecta a la base de datos y se actualiza el estado y el código de error
             await sql.connect(config);
             await sql.query`UPDATE peticiones SET idEstado = 3, idError = ${codigo} WHERE idPeticion = ${idPeticion} AND idVersion = ${idVersion}`;
-            logger.info(`Estado actualizado a 3 y error registrado para idPeticion ${idPeticion} y version ${idVersion}`);
             logger.info(`Estado actualizado a 3 y error registrado para idPeticion ${idPeticion} y version ${idVersion}`);
 
         } else if (receipt && receipt['corpme-floti'] && receipt['corpme-floti']['acuses'] && receipt['corpme-floti']['acuses'][0]['acuse']) {
             // Se accede al objeto 'acuse'
             const acuse = receipt['corpme-floti']['acuses'][0]['acuse'][0];
 
-                // Se verifica si el acuse contiene un error
-                if (acuse.error) {
-                    const codigo = acuse.error[0]['$'].codigo;
-                    logger.info("Codigo",codigo);
-                    const mensaje = acuse.error[0]['_'];
-                    logger.error(`Error especí­fico en el acuse para ID ${idPeticion} ${idVersion}: ${mensaje} (CÃ³digo ${codigo})`);
-                    logger.info(`Error especí­fico en el acuse para ID ${idPeticion} ${idVersion}: ${mensaje} (CÃ³digo ${codigo})`);
+            // Se verifica si el acuse contiene un error
+            if (acuse.error) {
+                const codigo = acuse.error[0]['$'].codigo;
+                logger.info("Codigo", codigo);
+                const mensaje = acuse.error[0]['_'];
+                logger.error(`Error especí­fico en el acuse para ID ${idPeticion} ${idVersion}: ${mensaje} (Codigo ${codigo})`);
 
-                    idEstado = 3; // Se cambia el estado a 3 por error especí­fico
-                    comentario = `Petición recibida por Registradores KO: idError: ${codigo} | ${mensaje}`;
+                idEstado = 3; // Se cambia el estado a 3 por error especí­fico
+                comentario = `Petición recibida por Registradores KO: idError: ${codigo} | ${mensaje}`;
 
-                    // Se conecta a la base de datos y se actualiza el estado y el cÃ³digo de error
+                // Se conecta a la base de datos y se actualiza el estado y el código de error
 
-                    await sql.query`UPDATE peticiones SET idEstado = 3, idError = ${codigo} WHERE idPeticion = ${idPeticion} AND idVersion = ${idVersion}`;
-                    logger.info(`Estado actualizado a 3 y error registrado para idPeticion ${idPeticion} y version ${idVersion}`);
-                    logger.info(`Estado actualizado a 3 y error registrado para idPeticion ${idPeticion} y version ${idVersion}`);
-                    
-                } else {
+                await sql.query`UPDATE peticiones SET idEstado = 3, idError = ${codigo} WHERE idPeticion = ${idPeticion} AND idVersion = ${idVersion}`;
+                logger.info(`Estado actualizado a 3 y error registrado para idPeticion ${idPeticion} y version ${idVersion}`);
+
+            } else {
                 const acuse = receipt['corpme-floti']['acuses'][0]['acuse'][0];
                 try {
                     await sql.query`UPDATE peticiones SET idEstado = 2, idError = NULL WHERE idPeticion = ${idPeticion} AND idVersion = ${idVersion}`;
-                    logger.info(`Estado actualizado a 2 para idPeticion ${idPeticion} y version ${idVersion}`);
                     logger.info(`Estado actualizado a 2 para idPeticion ${idPeticion} y version ${idVersion}`);
 
                     // Se procesa cada identificador (si hay varios, serÃ­a acuse['identificador'].forEach(...))
@@ -785,17 +779,16 @@ async function handleReceipt(receipt, idPeticion, idVersion) {
                         for (const identificador of acuse['identificador']) {
                             await sql.query`UPDATE peticiones SET idCorpme = ${identificador} WHERE idPeticion = ${idPeticion} AND idVersion = ${idVersion}`;
                             logger.info(`Identificador actualizado a ${identificador} para idPeticion ${idPeticion} y version ${idVersion}`);
-                            logger.info(`Identificador actualizado a ${identificador} para idPeticion ${idPeticion} y version ${idVersion}`); 
                             comentario = `Petición recibida por Registradores OK: idCorpme = ${identificador}`;
-                        }                    
+                        }
                     }
                 } catch (err) {
                     logger.error('Error al realizar operaciones en la base de datos:', err);
-                    logger.info(`Error al realizar operaciones en la base de datos: ${err}`); 
-                } 
+                    logger.info(`Error al realizar operaciones en la base de datos: ${err}`);
+                }
             }
         }
-        
+
         // Se llama al procedure después de manejar el receipt
 
         const query = `
@@ -808,7 +801,7 @@ async function handleReceipt(receipt, idPeticion, idVersion) {
         `;
         const request = new sql.Request();
 
-        request.input('idPeticion',sql.Int, idPeticion);
+        request.input('idPeticion', sql.Int, idPeticion);
         request.input('idVersion', sql.SmallInt, idVersion);
         request.input('idUsuario', sql.VarChar(20), idUsuario);
         request.input('idEstado', sql.TinyInt, idEstado);
@@ -821,7 +814,7 @@ async function handleReceipt(receipt, idPeticion, idVersion) {
 
     } catch (err) {
         logger.error('Error al realizar operaciones en la base de datos:', err);
-        
+
     } finally {
         await sql.close();
     }
@@ -834,15 +827,15 @@ async function processReenvioCorpmeFloti(xmlData, idPeticion, idVersion) {
         const respuesta = corpmeFloti.respuesta[0];
         const identificador = respuesta.identificador ? respuesta.identificador[0] : null;
         const informacion = respuesta.informacion ? respuesta.informacion[0] : null;
-        
-        // Accedemos al tipo-respuesta y su cÃ³digo
+
+        // Accedemos al tipo-respuesta y su código
         const tipoRespuesta = respuesta['tipo-respuesta'] ? respuesta['tipo-respuesta'][0] : null;
         const codigoTipoRespuesta = tipoRespuesta ? tipoRespuesta['$'].codigo : null;
         const textoTipoRespuesta = tipoRespuesta ? tipoRespuesta['_'] : null;
-    
+
         // Extraer referencia que contiene RF_idPeticion_idVersion
         const referencia = respuesta.referencia ? respuesta.referencia[0] : null;
- 
+
 
         // Hacemos una copia del XML para modificarla antes de guardarla en la base de datos
         let xmlDataSinPdfNiFirma = JSON.parse(JSON.stringify(xmlData)); // Copia profunda del objeto original
@@ -854,7 +847,7 @@ async function processReenvioCorpmeFloti(xmlData, idPeticion, idVersion) {
         }
 
         // Eliminar el fichero PDF incrustado en la copia del XML
-        if (xmlDataSinPdfNiFirma['corpme-floti'].respuesta[0].informacion && 
+        if (xmlDataSinPdfNiFirma['corpme-floti'].respuesta[0].informacion &&
             xmlDataSinPdfNiFirma['corpme-floti'].respuesta[0].informacion[0].fichero) {
             delete xmlDataSinPdfNiFirma['corpme-floti'].respuesta[0].informacion[0].fichero;
         }
@@ -862,7 +855,7 @@ async function processReenvioCorpmeFloti(xmlData, idPeticion, idVersion) {
         // Guardar el XML sin el PDF incrustado y sin el campo ds:signature en la tabla peticiones
         try {
             await sql.connect(config);
-            
+
             // Se convierte el objeto modificado de vuelta a formato XML
             const xmlStringSinPdfNiFirma = builder.buildObject(xmlDataSinPdfNiFirma);
 
@@ -895,23 +888,23 @@ async function processReenvioCorpmeFloti(xmlData, idPeticion, idVersion) {
             logger.info(`Archivo XML de respuesta a reenvío guardado idPeticion: ${idPeticion} | idVersion: ${idVersion} | idCorpme ${identificador}`);
             logger.info(`Archivo XML de respuesta a reenvío guardado idPeticion: ${idPeticion} | idVersion: ${idVersion} | idCorpme ${identificador}`);
         });
-        
+
         if (!tipoRespuesta) {
             res.status(400).send('(Reenvio) Tipo de respuesta no encontrado');
             logger.info(`(Reenvio) Tipo de respuesta no encontrado al tramitar una respuesta Floti`);
             return;
         }
 
-        logger.info("CodigoRespuesta",codigoTipoRespuesta, textoTipoRespuesta);
+        logger.info("CodigoRespuesta", codigoTipoRespuesta, textoTipoRespuesta);
 
         if (codigoTipoRespuesta === '11') {
-        // Si tipo-respuesta es 11, es la nota simple reenviada
+            // Si tipo-respuesta es 11, es la nota simple reenviada
             let ficheroPdfBase64;
             if (informacion && informacion.fichero && informacion.fichero.length > 0) {
                 ficheroPdfBase64 = informacion.fichero[0]['_'];
 
                 try {
-                    // ConexiÃ³n a la base de datos
+                    // Conexión a la base de datos
                     await sql.connect(config);
                     const query = `UPDATE peticiones SET pdf = @pdf, IdEstado = 5, idRespuesta = @codigoTipoRespuesta WHERE idCorpme = @idCorpme AND idPeticion = @idPeticion AND idVersion = @idVersion`;
                     const request = new sql.Request();
@@ -937,15 +930,15 @@ async function processReenvioCorpmeFloti(xmlData, idPeticion, idVersion) {
                         @idEstado,
                         @comentario
                     `;
-                
+
                     const requestHistoria = new sql.Request();
-        
-                    requestHistoria.input('idPeticion',sql.Int, idPeticion);
+
+                    requestHistoria.input('idPeticion', sql.Int, idPeticion);
                     requestHistoria.input('idVersion', sql.SmallInt, idVersion);
                     requestHistoria.input('idUsuario', sql.VarChar(20), idUsuario);
                     requestHistoria.input('idEstado', sql.TinyInt, idEstado);
                     requestHistoria.input('comentario', sql.NVarChar(sql.MAX), comentario);
-        
+
                     await requestHistoria.query(queryHistoria);
 
                     logger.info(`PDF de nota simple reenviada guardado en la base de datos exitosamente para idCorpme: ${identificador}, idPeticion: ${idPeticion} e idVersion: ${idVersion}`);
@@ -964,15 +957,15 @@ async function processReenvioCorpmeFloti(xmlData, idPeticion, idVersion) {
                 }
             }
         } else {
-           // Notas denegadas 
+            // Notas denegadas 
             if (codigoTipoRespuesta === '12') {
-            // Nota simple reenviada negativa
+                // Nota simple reenviada negativa
                 try {
                     await sql.connect(config);
                     // Guardar tipo-respuesta en la tabla peticiones
                     const query = `UPDATE peticiones SET IdEstado = 7, idRespuesta = @codigoTipoRespuesta WHERE idCorpme = @idCorpme`;
                     const request = new sql.Request();
-                    request.input('codigoTipoRespuesta', sql.Int, codigoTipoRespuesta); 
+                    request.input('codigoTipoRespuesta', sql.Int, codigoTipoRespuesta);
                     request.input('idCorpme', sql.VarChar(50), identificador);
                     await request.query(query);
 
@@ -987,7 +980,7 @@ async function processReenvioCorpmeFloti(xmlData, idPeticion, idVersion) {
                         const idUsuario = "CORPME";
                         const idEstado = 7;
 
-                            const query = `
+                        const query = `
                             EXEC notassimples.peticiones_historia_new
                                 @idPeticion,
                                 @idVersion,
@@ -995,17 +988,17 @@ async function processReenvioCorpmeFloti(xmlData, idPeticion, idVersion) {
                                 @idEstado,
                                 @comentario
                             `;
-                        
-                            const request = new sql.Request();
-                
-                            request.input('idPeticion',sql.Int, idPeticion);
-                            request.input('idVersion', sql.SmallInt, idVersion);
-                            request.input('idUsuario', sql.VarChar(20), idUsuario);
-                            request.input('idEstado', sql.TinyInt, idEstado);
-                            request.input('comentario', sql.NVarChar(sql.MAX), comentario);
-                
-                            await request.query(query);
-                            logger.info(`Recibida respuesta negativa para solicitud de reenvío: ${identificador}, idPeticion: ${idPeticion} e idVersion: ${idVersion}. ${comentario}`);
+
+                        const request = new sql.Request();
+
+                        request.input('idPeticion', sql.Int, idPeticion);
+                        request.input('idVersion', sql.SmallInt, idVersion);
+                        request.input('idUsuario', sql.VarChar(20), idUsuario);
+                        request.input('idEstado', sql.TinyInt, idEstado);
+                        request.input('comentario', sql.NVarChar(sql.MAX), comentario);
+
+                        await request.query(query);
+                        logger.info(`Recibida respuesta negativa para solicitud de reenvío: ${identificador}, idPeticion: ${idPeticion} e idVersion: ${idVersion}. ${comentario}`);
                     } else {
                         logger.error('(Reenvio) No se encontraron idPeticion o idVersion asociados con el identificador corpme');
                         logger.info(`(Reenvio) No se encontraron idPeticion o idVersion asociados con el identificador corpme`);
@@ -1027,23 +1020,23 @@ async function processReenvioCorpmeFloti(xmlData, idPeticion, idVersion) {
                     // Guardar tipo-respuesta en la tabla peticiones
                     const query = `UPDATE peticiones SET IdEstado = 7, idRespuesta = @codigoTipoRespuesta WHERE idCorpme = @idCorpme AND idPeticion = @idPeticion AND idVersion = @idVersion`;
                     const request = new sql.Request();
-                    request.input('codigoTipoRespuesta', sql.Int, codigoTipoRespuesta); 
+                    request.input('codigoTipoRespuesta', sql.Int, codigoTipoRespuesta);
                     request.input('idCorpme', sql.VarChar(50), identificador);
                     request.input('idPeticion', sql.Int, idPeticion);
                     request.input('idVersion', sql.SmallInt, idVersion);
                     await request.query(query);
-                    
+
 
                     // Llamar al procedimiento con el comentario basado en informacion.texto
                     let textoIntermedio;
                     textoIntermedio = 'Desconocido';
-                
+
                     const textoTipoRespuesta = informacion && informacion.texto ? informacion.texto[0] : 'Sin información adicional';
                     const comentario = `Petición denegada por Registradores: idRespuesta: ${codigoTipoRespuesta} | ${textoIntermedio} | ${textoTipoRespuesta}`;
                     const idUsuario = "CORPME";
                     const idEstado = 4;
 
-                        const queryHistory = `
+                    const queryHistory = `
                         EXEC notassimples.peticiones_historia_new
                             @idPeticion,
                             @idVersion,
@@ -1051,17 +1044,17 @@ async function processReenvioCorpmeFloti(xmlData, idPeticion, idVersion) {
                             @idEstado,
                             @comentario
                         `;
-                    
-                        const requestHistory = new sql.Request();
-            
-                        requestHistory.input('idPeticion',sql.Int, idPeticion);
-                        requestHistory.input('idVersion', sql.SmallInt, idVersion);
-                        requestHistory.input('idUsuario', sql.VarChar(20), idUsuario);
-                        requestHistory.input('idEstado', sql.TinyInt, idEstado);
-                        requestHistory.input('comentario', sql.NVarChar(sql.MAX), comentario);
-            
-                        await request.query(queryHistory);
-                        logger.info(`Petición reenvío denegada por Registradores para solicitud de reenvío: idRespuesta: ${codigoTipoRespuesta} | ${textoIntermedio} | ${textoTipoRespuesta} | idCorpme: ${identificador} | idPeticion: ${idPeticion} | idVersion:${idPeticion}.`);
+
+                    const requestHistory = new sql.Request();
+
+                    requestHistory.input('idPeticion', sql.Int, idPeticion);
+                    requestHistory.input('idVersion', sql.SmallInt, idVersion);
+                    requestHistory.input('idUsuario', sql.VarChar(20), idUsuario);
+                    requestHistory.input('idEstado', sql.TinyInt, idEstado);
+                    requestHistory.input('comentario', sql.NVarChar(sql.MAX), comentario);
+
+                    await request.query(queryHistory);
+                    logger.info(`Petición reenvío denegada por Registradores para solicitud de reenvío: idRespuesta: ${codigoTipoRespuesta} | ${textoIntermedio} | ${textoTipoRespuesta} | idCorpme: ${identificador} | idPeticion: ${idPeticion} | idVersion:${idPeticion}.`);
 
 
                     // Enviar confirmación sin el procesamiento del PDF
@@ -1082,8 +1075,8 @@ async function processReenvioCorpmeFloti(xmlData, idPeticion, idVersion) {
     }
 }
 
- // Ruta principal para servir la pÃ¡gina HTML
-    app.get('/', (req, res) => {
+// Ruta principal para servir la pÃ¡gina HTML
+app.get('/', (req, res) => {
     res.sendFile(path.join(__dirname, '/public/index.html'));
 });
 
@@ -1237,7 +1230,7 @@ app.get('/stats', async (req, res) => {
             WHERE idEstado IN (2, 4, 5, 8)
             GROUP BY idEstado
         `;
-        
+
         const result = await sql.query(query);
         const stats = {
             enEspera: 0,
@@ -1278,10 +1271,10 @@ app.get('/procesar-peticiones-dbfs', async (req, res) => {
         logger.info(`registradores_peticiones_pendientes ejecutando ...`);
 
         await sql.connect(config);
-        
+
         // Consulta SQL para obtener solo las primeras 10 peticiones pendientes
         const query = `EXEC notassimples.registradores_peticiones_pendientes`;
-        
+
         const result = await sql.query(query);
         const peticiones = result.recordset;
 
@@ -1345,12 +1338,12 @@ async function processCorpmeFloti(xmlData, res) {
         const respuesta = corpmeFloti.respuesta[0];
         const identificador = respuesta.identificador ? respuesta.identificador[0] : null;
         const informacion = respuesta.informacion ? respuesta.informacion[0] : null;
-        
-        // Accedemos al tipo-respuesta y su cÃ³digo
+
+        // Accedemos al tipo-respuesta y su código
         const tipoRespuesta = respuesta['tipo-respuesta'] ? respuesta['tipo-respuesta'][0] : null;
         const codigoTipoRespuesta = tipoRespuesta ? tipoRespuesta['$'].codigo : null;
         const textoTipoRespuesta = tipoRespuesta ? tipoRespuesta['_'] : null;
-    
+
         // Hacemos una copia del XML para modificarla antes de guardarla en la base de datos
         let xmlDataSinPdfNiFirma = JSON.parse(JSON.stringify(xmlData)); // Copia profunda del objeto original
 
@@ -1361,7 +1354,7 @@ async function processCorpmeFloti(xmlData, res) {
         }
 
         // Eliminar el fichero PDF incrustado en la copia del XML
-        if (xmlDataSinPdfNiFirma['corpme-floti'].respuesta[0].informacion && 
+        if (xmlDataSinPdfNiFirma['corpme-floti'].respuesta[0].informacion &&
             xmlDataSinPdfNiFirma['corpme-floti'].respuesta[0].informacion[0].fichero) {
             delete xmlDataSinPdfNiFirma['corpme-floti'].respuesta[0].informacion[0].fichero;
         }
@@ -1369,7 +1362,7 @@ async function processCorpmeFloti(xmlData, res) {
         // Guardar el XML sin el PDF incrustado y sin el campo ds:signature en la tabla peticiones
         try {
             await sql.connect(config);
-            
+
             // Se convierte el objeto modificado de vuelta a formato XML
             const xmlStringSinPdfNiFirma = builder.buildObject(xmlDataSinPdfNiFirma);
 
@@ -1391,14 +1384,14 @@ async function processCorpmeFloti(xmlData, res) {
         await sql.connect(config);
         const idPeticion = await getIdPeticionByIdCorpme(identificador);
         const idVersion = await getIdVersionByIdCorpme(identificador);
-        
+
         if (!tipoRespuesta) {
             res.status(400).send('Tipo de respuesta no encontrado');
             logger.info(`Tipo de respuesta no encontrado al tramitar una respuesta Floti`);
             return;
         }
 
-        logger.info("codigoRespuesta",codigoTipoRespuesta, textoTipoRespuesta);
+        logger.info("codigoRespuesta", codigoTipoRespuesta, textoTipoRespuesta);
 
         // Si tipo-respuesta es 1, es la nota simple solicitada
 
@@ -1408,17 +1401,17 @@ async function processCorpmeFloti(xmlData, res) {
                 ficheroPdfBase64 = informacion.fichero[0]['_'];
 
                 try {
-                    // ConexiÃ³n a la base de datos
+                    // Conexión a la base de datos
                     await sql.connect(config);
                     const query = `UPDATE peticiones SET pdf = @pdf, IdEstado = 5, idRespuesta = @codigoTipoRespuesta WHERE idCorpme = @idCorpme`;
                     const request = new sql.Request();
                     const pdfBuffer = Buffer.from(ficheroPdfBase64, 'base64');
-                    
+
                     // Extraer CSV y Huella del PDF
                     const { csvCode, huellaCode } = await extractCodesFromPdf(pdfBuffer);
                     logger.info('CSV encontrado:', csvCode);
                     logger.info('Huella encontrada:', huellaCode);
-                    
+
                     request.input('pdf', sql.VarBinary(sql.MAX), pdfBuffer);
                     request.input('idCorpme', sql.VarChar(50), identificador);
                     request.input('codigoTipoRespuesta', sql.Int, codigoTipoRespuesta);
@@ -1446,15 +1439,15 @@ async function processCorpmeFloti(xmlData, res) {
                             @idEstado,
                             @comentario
                         `;
-                    
+
                         const request = new sql.Request();
-            
-                        request.input('idPeticion',sql.Int, idPeticion);
+
+                        request.input('idPeticion', sql.Int, idPeticion);
                         request.input('idVersion', sql.SmallInt, idVersion);
                         request.input('idUsuario', sql.VarChar(20), idUsuario);
                         request.input('idEstado', sql.TinyInt, idEstado);
                         request.input('comentario', sql.NVarChar(sql.MAX), comentario);
-            
+
                         await request.query(query);
 
                         logger.info(`PDF de nota simple guardado en la base de datos exitosamente para idCorpme: ${identificador}, idPeticion: ${idPeticion} e idVersion: ${idVersion}`);
@@ -1487,7 +1480,7 @@ async function processCorpmeFloti(xmlData, res) {
                 }
             }
         } else if (codigoTipoRespuesta === '11') {
-        // Si tipo-respuesta es 11, es la nota simple reenviada
+            // Si tipo-respuesta es 11, es la nota simple reenviada
             let ficheroPdfBase64;
             if (informacion && informacion.fichero && informacion.fichero.length > 0) {
                 ficheroPdfBase64 = informacion.fichero[0]['_'];
@@ -1496,7 +1489,7 @@ async function processCorpmeFloti(xmlData, res) {
 
                     const idPeticion = await getIdPeticionByIdCorpme(identificador);  // Función para obtener idPeticion
                     const idVersion = await getIdVersionByIdCorpme(identificador);    // Función para obtener idVersion
-                    // ConexiÃ³n a la base de datos
+                    // Conexión a la base de datos
                     await sql.connect(config);
                     const query = `UPDATE peticiones SET pdf = @pdf, IdEstado = 5, idRespuesta = @codigoTipoRespuesta WHERE idCorpme = @idCorpme AND idPeticion = @idPeticion AND idVersion = @idVersion`;
                     const request = new sql.Request();
@@ -1523,15 +1516,15 @@ async function processCorpmeFloti(xmlData, res) {
                             @idEstado,
                             @comentario
                         `;
-                    
+
                         const request = new sql.Request();
-            
-                        request.input('idPeticion',sql.Int, idPeticion);
+
+                        request.input('idPeticion', sql.Int, idPeticion);
                         request.input('idVersion', sql.SmallInt, idVersion);
                         request.input('idUsuario', sql.VarChar(20), idUsuario);
                         request.input('idEstado', sql.TinyInt, idEstado);
                         request.input('comentario', sql.NVarChar(sql.MAX), comentario);
-            
+
                         await request.query(query);
 
                         logger.info(`PDF de nota simple reenviada de manera asícrono guardado en la base de datos exitosamente para idCorpme: ${identificador}, idPeticion: ${idPeticion} e idVersion: ${idVersion}`);
@@ -1563,7 +1556,7 @@ async function processCorpmeFloti(xmlData, res) {
                 // Guardar tipo-respuesta en la tabla peticiones
                 const query = `UPDATE peticiones SET IdEstado = 2, idRespuesta = @codigoTipoRespuesta WHERE idCorpme = @idCorpme AND idPeticion = @idPeticion AND idVersion = @idVersion`;
                 const request = new sql.Request();
-                request.input('codigoTipoRespuesta', sql.Int, codigoTipoRespuesta); 
+                request.input('codigoTipoRespuesta', sql.Int, codigoTipoRespuesta);
                 request.input('idCorpme', sql.VarChar(50), identificador);
                 request.input('idPeticion', sql.Int, idPeticion);
                 request.input('idVersion', sql.SmallInt, idVersion);
@@ -1573,13 +1566,13 @@ async function processCorpmeFloti(xmlData, res) {
                     // Llamar al procedimiento con el comentario basado en informacion.texto
                     let textoIntermedio;
                     textoIntermedio = 'Desconocido';
-                
+
                     const textoTipoRespuesta = informacion && informacion.texto ? informacion.texto[0] : 'Sin información adicional';
                     const comentario = `Aviso de redirección: La petición ha sido redirigida a otro Registro. idRespuesta: ${codigoTipoRespuesta} | ${textoIntermedio} | ${textoTipoRespuesta}`;
                     const idUsuario = "CORPME";
                     const idEstado = 2;
 
-                        const query = `
+                    const query = `
                         EXEC notassimples.peticiones_historia_new
                             @idPeticion,
                             @idVersion,
@@ -1587,17 +1580,17 @@ async function processCorpmeFloti(xmlData, res) {
                             @idEstado,
                             @comentario
                         `;
-                    
-                        const request = new sql.Request();
-            
-                        request.input('idPeticion',sql.Int, idPeticion);
-                        request.input('idVersion', sql.SmallInt, idVersion);
-                        request.input('idUsuario', sql.VarChar(20), idUsuario);
-                        request.input('idEstado', sql.TinyInt, idEstado);
-                        request.input('comentario', sql.NVarChar(sql.MAX), comentario);
-            
-                        await request.query(query);
-                        logger.info(`Aviso de redirección: La petición ha sido redirigida a otro Registro. idRespuesta: ${codigoTipoRespuesta} | ${textoIntermedio} | ${textoTipoRespuesta} | idCorpme: ${identificador} | idPeticion: ${idPeticion} | idVersion:${idPeticion}.`);
+
+                    const request = new sql.Request();
+
+                    request.input('idPeticion', sql.Int, idPeticion);
+                    request.input('idVersion', sql.SmallInt, idVersion);
+                    request.input('idUsuario', sql.VarChar(20), idUsuario);
+                    request.input('idEstado', sql.TinyInt, idEstado);
+                    request.input('comentario', sql.NVarChar(sql.MAX), comentario);
+
+                    await request.query(query);
+                    logger.info(`Aviso de redirección: La petición ha sido redirigida a otro Registro. idRespuesta: ${codigoTipoRespuesta} | ${textoIntermedio} | ${textoTipoRespuesta} | idCorpme: ${identificador} | idPeticion: ${idPeticion} | idVersion:${idPeticion}.`);
                 } else {
                     logger.error('No se encontraron idPeticion o idVersion asociados con el identificador corpme');
                     logger.info(`No se encontraron idPeticion o idVersion asociados con el identificador corpme`);
@@ -1614,9 +1607,9 @@ async function processCorpmeFloti(xmlData, res) {
                 if (!res.headersSent) res.status(500).send('Error al procesar la respuesta');
             }
         } else {
-           // Notas denegadas 
+            // Notas denegadas 
             if (codigoTipoRespuesta === '12') {
-            // Nota simple reenviada negativa
+                // Nota simple reenviada negativa
                 try {
                     // Obtener idPeticion y idVersion
                     const idPeticion = await getIdPeticionByIdCorpme(identificador);
@@ -1625,7 +1618,7 @@ async function processCorpmeFloti(xmlData, res) {
                     // Guardar tipo-respuesta en la tabla peticiones
                     const query = `UPDATE peticiones SET IdEstado = 7, idRespuesta = @codigoTipoRespuesta WHERE idCorpme = @idCorpme AND idPeticion = @idPeticion AND idVersion = @idVersion`;
                     const request = new sql.Request();
-                    request.input('codigoTipoRespuesta', sql.Int, codigoTipoRespuesta); 
+                    request.input('codigoTipoRespuesta', sql.Int, codigoTipoRespuesta);
                     request.input('idCorpme', sql.VarChar(50), identificador);
                     request.input('idPeticion', sql.Int, idPeticion);
                     request.input('idVersion', sql.SmallInt, idVersion);
@@ -1635,13 +1628,13 @@ async function processCorpmeFloti(xmlData, res) {
                         // Llamar al procedimiento con el comentario basado en informacion.texto
                         let textoIntermedio;
                         textoIntermedio = 'Desconocido';
-                    
+
                         const textoTipoRespuesta = informacion && informacion.texto ? informacion.texto[0] : 'Sin información adicional';
                         const comentario = `Petición denegada por Registradores: idRespuesta: ${codigoTipoRespuesta} | ${textoIntermedio} | ${textoTipoRespuesta}`;
                         const idUsuario = "CORPME";
                         const idEstado = 7;
 
-                            const query = `
+                        const query = `
                             EXEC notassimples.peticiones_historia_new
                                 @idPeticion,
                                 @idVersion,
@@ -1649,17 +1642,17 @@ async function processCorpmeFloti(xmlData, res) {
                                 @idEstado,
                                 @comentario
                             `;
-                        
-                            const request = new sql.Request();
-                
-                            request.input('idPeticion',sql.Int, idPeticion);
-                            request.input('idVersion', sql.SmallInt, idVersion);
-                            request.input('idUsuario', sql.VarChar(20), idUsuario);
-                            request.input('idEstado', sql.TinyInt, idEstado);
-                            request.input('comentario', sql.NVarChar(sql.MAX), comentario);
-                
-                            await request.query(query);
-                            logger.info(`Recibida respuesta negativa asíncrono para solicitud de nota simple: idRespuesta: ${codigoTipoRespuesta} | ${textoIntermedio} | ${textoTipoRespuesta} | idCorpme: ${identificador} | idPeticion: ${idPeticion} | idVersion:${idPeticion}.`);
+
+                        const request = new sql.Request();
+
+                        request.input('idPeticion', sql.Int, idPeticion);
+                        request.input('idVersion', sql.SmallInt, idVersion);
+                        request.input('idUsuario', sql.VarChar(20), idUsuario);
+                        request.input('idEstado', sql.TinyInt, idEstado);
+                        request.input('comentario', sql.NVarChar(sql.MAX), comentario);
+
+                        await request.query(query);
+                        logger.info(`Recibida respuesta negativa asíncrono para solicitud de nota simple: idRespuesta: ${codigoTipoRespuesta} | ${textoIntermedio} | ${textoTipoRespuesta} | idCorpme: ${identificador} | idPeticion: ${idPeticion} | idVersion:${idPeticion}.`);
                     } else {
                         logger.error('No se encontraron idPeticion o idVersion asociados con el identificador corpme');
                         logger.info(`No se encontraron idPeticion o idVersion asociados con el identificador corpme`);
@@ -1681,7 +1674,7 @@ async function processCorpmeFloti(xmlData, res) {
                     // Guardar tipo-respuesta en la tabla peticiones
                     const query = `UPDATE peticiones SET IdEstado = 4, idRespuesta = @codigoTipoRespuesta WHERE idCorpme = @idCorpme`;
                     const request = new sql.Request();
-                    request.input('codigoTipoRespuesta', sql.Int, codigoTipoRespuesta); 
+                    request.input('codigoTipoRespuesta', sql.Int, codigoTipoRespuesta);
                     request.input('idCorpme', sql.VarChar(50), identificador);
                     await request.query(query);
 
@@ -1718,7 +1711,7 @@ async function processCorpmeFloti(xmlData, res) {
                         const idUsuario = "CORPME";
                         const idEstado = 4;
 
-                            const query = `
+                        const query = `
                             EXEC notassimples.peticiones_historia_new
                                 @idPeticion,
                                 @idVersion,
@@ -1726,17 +1719,17 @@ async function processCorpmeFloti(xmlData, res) {
                                 @idEstado,
                                 @comentario
                             `;
-                        
-                            const request = new sql.Request();
-                
-                            request.input('idPeticion',sql.Int, idPeticion);
-                            request.input('idVersion', sql.SmallInt, idVersion);
-                            request.input('idUsuario', sql.VarChar(20), idUsuario);
-                            request.input('idEstado', sql.TinyInt, idEstado);
-                            request.input('comentario', sql.NVarChar(sql.MAX), comentario);
-                
-                            await request.query(query);
-                            logger.info(`Petición denegada por Registradores: idRespuesta: ${codigoTipoRespuesta} | ${textoIntermedio} | ${textoTipoRespuesta} | idCorpme: ${identificador} | idPeticion: ${idPeticion} | idVersion:${idVersion}.`);
+
+                        const request = new sql.Request();
+
+                        request.input('idPeticion', sql.Int, idPeticion);
+                        request.input('idVersion', sql.SmallInt, idVersion);
+                        request.input('idUsuario', sql.VarChar(20), idUsuario);
+                        request.input('idEstado', sql.TinyInt, idEstado);
+                        request.input('comentario', sql.NVarChar(sql.MAX), comentario);
+
+                        await request.query(query);
+                        logger.info(`Petición denegada por Registradores: idRespuesta: ${codigoTipoRespuesta} | ${textoIntermedio} | ${textoTipoRespuesta} | idCorpme: ${identificador} | idPeticion: ${idPeticion} | idVersion:${idVersion}.`);
                     } else {
                         logger.error(`No se encontraron idPeticion ${idPeticion} o idVersion ${idPeticion} asociados con el identificador corpme: ${identificador}`);
                         logger.info(`No se encontraron idPeticion ${idPeticion} o idVersion ${idPeticion} asociados con el identificador corpme: ${identificador}`);
@@ -1760,7 +1753,7 @@ async function processCorpmeFloti(xmlData, res) {
     }
 }
 
- // Función para procesar el XML de tipo 'corpme-floti-facturacion' segÃºn recibe los datos
+// Función para procesar el XML de tipo 'corpme-floti-facturacion' segÃºn recibe los datos
 // async function processCorpmeFlotiFacturacion(xmlData, res) {
 //     const facturacion = xmlData['corpme-floti-facturacion'];
 //     const facturacionData = facturacion.facturacion ? facturacion.facturacion[0] : null;
@@ -1805,8 +1798,8 @@ async function processCorpmeFloti(xmlData, res) {
 
 //         try {
 
-            
-//             // ConexiÃ³n a la base de datos
+
+//             // Conexión a la base de datos
 //             pool = await sql.connect(config);
 
 //             // Insertar datos en la tabla facturación_factura
@@ -1896,7 +1889,7 @@ async function processCorpmeFloti(xmlData, res) {
 //                     } else {
 //                         logger.info(`No se encontró un Ãºnico registro para el NIF: ${emisorNif}`);
 //                     }
-                            
+
 //                     // Insertar datos en la tabla facturacion_emisor
 //                     const emisorQuery = `
 //                     INSERT INTO facturacion_emisor (factura_idTabla, emisor_codigoRegistro, emisor_nombreRegistro, emisor_nif, emisor_nombre, emisor_domicilio, emisor_municipio, emisor_provincia, emisor_cp, emisor_base, emisor_impuesto, emisor_irpf, "emisor_fecha-factura", emisor_ejercicio, emisor_serie, emisor_numero, "emisor_regimen-caja") 
@@ -1922,12 +1915,12 @@ async function processCorpmeFloti(xmlData, res) {
 
 //                     await requestEmisor.query(emisorQuery);
 //                     //logger.info(`Registro agregado a facturacion_emisor: factura_idTabla=${IdTabla}, codigoRegistro=${codigoRegistro}`);          
-                        
+
 //                 }
 
 //                 // Asegurarse de que 'peticion' sea un array.
 //                 const peticiones = Array.isArray(factura.peticion) ? factura.peticion : [factura.peticion];
-            
+
 //                 // Iterar sobre todas las peticiones en cada factura
 //                 for (let peticion of peticiones) {
 //                     if (peticion) {
@@ -1941,7 +1934,7 @@ async function processCorpmeFloti(xmlData, res) {
 //                         const importeBasePeticion = peticion.$['importe-base'];
 //                         const porcentajeImpuesto = peticion.$['porcentaje-impuesto'];
 //                         const referencia = peticion.$['referencia'];
-            
+
 //                         // Insertar datos en la tabla facturación_peticion
 //                         const peticionQuery = `INSERT INTO facturacion_peticion (factura_idTabla, emisor_codigoRegistro, emisor_nif, peticion_idCorpme, "peticion_fecha-peticion", "peticion_fecha-respuesta","peticion_importe-base","peticion_porcentaje-impuesto", peticion_referencia) 
 //                         VALUES (@factura_idTabla, @emisor_codigoRegistro, @emisor_nif, @id_peticion, @fecha, @fecha_respuesta, @importe_base, @porcentaje_impuesto, @referencia);`;
@@ -2039,7 +2032,8 @@ async function processCorpmeFlotiFacturacion(xmlData, res) {
     let pool;
 
     try {
-        pool = await sql.connect(config);
+        pool = new sql.ConnectionPool(config);
+        await pool.connect();
 
         const facturaQuery = `INSERT INTO facturacion_factura ("factura_idFactura", "factura_idUsuario", "factura_importe-base", "factura_importe-impuesto", "factura_periodo-inicio", "factura_periodo-fin")
                             OUTPUT INSERTED.factura_idTabla 
@@ -2054,6 +2048,9 @@ async function processCorpmeFlotiFacturacion(xmlData, res) {
 
         const result = await requestFactura.query(facturaQuery);
         const IdTabla = result.recordset[0].factura_idTabla;
+
+        let cont_peticiones = 0
+        let suma_euros_peticiones = 0
 
         for (let factura of facturacionData.factura) {
             const ejercicio = factura.$['ejercicio'];
@@ -2081,39 +2078,27 @@ async function processCorpmeFlotiFacturacion(xmlData, res) {
 
             if (emisorNif) {
                 const codigoRegistroQuery = `
-                    SELECT CodigoRegistro 
-                    FROM registros_emisor 
-                    WHERE NIFEmisor = @emisor_nif 
-                    GROUP BY CodigoRegistro 
-                    HAVING COUNT(*) = 1;`;
-                const requestCodigo = pool.request();
-                requestCodigo.input('emisor_nif', sql.VarChar(20), emisorNif);
+                    SELECT CodigoRegistro,Descripcion
+                    FROM [TASADORES].[notassimples].registros_emplazamiento 
+                    WHERE CodigoRegistro = (SELECT TOP 1 CodigoRegistro 
+                        FROM [TASADORES].[notassimples].registros_emisor 
+                        WHERE NIFEmisor = @emisor_nif )`;
+                ;
 
-                const resultCodigo = await requestCodigo.query(codigoRegistroQuery);
-                if (resultCodigo.recordset.length === 1) {
-                    codigoRegistro = resultCodigo.recordset[0].CodigoRegistro;
+                const requestDescripcion = pool.request();
+                requestDescripcion.input('emisor_nif', sql.VarChar(20), emisorNif);
+                const resultDescripcion = await requestDescripcion.query(codigoRegistroQuery);
 
-                    const descripcionQuery = `
-                        SELECT Descripcion 
-                        FROM registros_emplazamiento 
-                        WHERE CodigoRegistro = @codigo_registro;`;
-                    const requestDescripcion = pool.request();
-                    requestDescripcion.input('codigo_registro', sql.Int, codigoRegistro);
-
-                    const resultDescripcion = await requestDescripcion.query(descripcionQuery);
-                    if (resultDescripcion.recordset.length === 1) {
-                        descripcionEmplazamiento = `Registro de la Propiedad de ${resultDescripcion.recordset[0].Descripcion}`;
-                    } else {
-                        logger.info(`No se encontró una descripción única para CodigoRegistro: ${codigoRegistro}`);
-                    }
+                if (resultDescripcion.recordset.length === 1) {
+                    descripcionEmplazamiento = `Registro de la Propiedad de ${resultDescripcion.recordset[0].Descripcion}`;
+                    codigoRegistro = resultDescripcion.recordset[0].CodigoRegistro
                 } else {
                     logger.info(`No se encontró un único registro para el NIF: ${emisorNif}`);
                 }
 
-                const emisorQuery = `
-                INSERT INTO facturacion_emisor (factura_idTabla, emisor_codigoRegistro, emisor_nombreRegistro, emisor_nif, emisor_nombre, emisor_domicilio, emisor_municipio, emisor_provincia, emisor_cp, emisor_base, emisor_impuesto, emisor_irpf, "emisor_fecha-factura", emisor_ejercicio, emisor_serie, emisor_numero, "emisor_regimen-caja") 
+                const emisorQuery = `INSERT INTO facturacion_emisor (factura_idTabla, emisor_codigoRegistro, emisor_nombreRegistro, emisor_nif, emisor_nombre, emisor_domicilio, emisor_municipio, emisor_provincia, emisor_cp, emisor_base, emisor_impuesto, emisor_irpf, "emisor_fecha-factura", emisor_ejercicio, emisor_serie, emisor_numero, "emisor_regimen-caja") 
                 VALUES (@factura_idTabla, @codigo_registro, @descripcion_emplazamiento, @nif, @nombre, @domicilio, @municipio, @provincia, @cp, @emisor_base, @emisor_impuesto, @emisor_irpf, @fecha_factura, @ejercicio, @serie, @numero, @regimen_caja);`;
-                const requestEmisor  = pool.request();
+                const requestEmisor = pool.request();
                 requestEmisor.input('factura_idTabla', sql.Int, IdTabla);
                 requestEmisor.input('codigo_registro', sql.Int, codigoRegistro);
                 requestEmisor.input('descripcion_emplazamiento', sql.VarChar(250), descripcionEmplazamiento);
@@ -2133,6 +2118,7 @@ async function processCorpmeFlotiFacturacion(xmlData, res) {
                 requestEmisor.input('regimen_caja', sql.Int, regimenCaja);
 
                 await requestEmisor.query(emisorQuery);
+
             }
 
             const peticiones = Array.isArray(factura.peticion) ? factura.peticion : [factura.peticion];
@@ -2140,40 +2126,57 @@ async function processCorpmeFlotiFacturacion(xmlData, res) {
             for (let peticion of peticiones) {
                 if (!peticion) continue;
 
-                const idPeticion = peticion.$['id'];
-                const fecha = peticion.$['fecha'];
-                const fechaRespuesta = peticion.$['fecha-respuesta'];
-                const importeBasePeticion = peticion.$['importe-base'];
-                const porcentajeImpuesto = peticion.$['porcentaje-impuesto'];
-                const referencia = peticion.$['referencia'];
+                try {
+                    const idPeticion = peticion.$['id'];
+                    const fecha = peticion.$['fecha'];
+                    const fechaRespuesta = peticion.$['fecha-respuesta'];
+                    const importeBasePeticion = peticion.$['importe-base'];
+                    const porcentajeImpuesto = peticion.$['porcentaje-impuesto'];
+                    const referencia = peticion.$['referencia'];
 
-                const peticionQuery = `INSERT INTO facturacion_peticion (factura_idTabla, emisor_codigoRegistro, emisor_nif, peticion_idCorpme, "peticion_fecha-peticion", "peticion_fecha-respuesta","peticion_importe-base","peticion_porcentaje-impuesto", peticion_referencia) 
-                VALUES (@factura_idTabla, @emisor_codigoRegistro, @emisor_nif, @id_peticion, @fecha, @fecha_respuesta, @importe_base, @porcentaje_impuesto, @referencia);`;
-                const requestPeticion  = pool.request();
-                requestPeticion.input('factura_idTabla', sql.Int,  IdTabla);
-                requestPeticion.input('emisor_codigoRegistro', sql.Int, codigoRegistro);
-                requestPeticion.input('emisor_nif', sql.VarChar(20), emisorNif);
-                requestPeticion.input('id_peticion', sql.VarChar(50), idPeticion);
-                requestPeticion.input('fecha', sql.SmallDateTime, new Date(fecha));
-                requestPeticion.input('fecha_respuesta', sql.SmallDateTime, new Date(fechaRespuesta));
-                requestPeticion.input('importe_base', sql.Money, parseFloat(importeBasePeticion));
-                requestPeticion.input('porcentaje_impuesto', sql.Decimal(5, 2), parseFloat(porcentajeImpuesto));
-                requestPeticion.input('referencia', sql.VarChar(50), referencia);
+                    // PREVENCIÓN DE ERRORES: Validar los datos antes de inyectarlos
+                    const fechaParsed = fecha ? new Date(fecha) : null;
+                    const fechaRespuestaParsed = fechaRespuesta ? new Date(fechaRespuesta) : null;
+                    const importeParsed = importeBasePeticion ? parseFloat(importeBasePeticion) : 0;
+                    const porcentajeParsed = porcentajeImpuesto ? parseFloat(porcentajeImpuesto) : 0;
 
-                await requestPeticion.query(peticionQuery);
+                    const peticionQuery = `INSERT INTO facturacion_peticion (factura_idTabla, emisor_codigoRegistro, emisor_nif, peticion_idCorpme, "peticion_fecha-peticion", "peticion_fecha-respuesta","peticion_importe-base","peticion_porcentaje-impuesto", peticion_referencia) 
+                    VALUES (@factura_idTabla, @emisor_codigoRegistro, @emisor_nif, @id_peticion, @fecha, @fecha_respuesta, @importe_base, @porcentaje_impuesto, @referencia);`;
+                    
+                    const requestPeticion = pool.request();
+                    requestPeticion.input('factura_idTabla', sql.Int, IdTabla);
+                    requestPeticion.input('emisor_codigoRegistro', sql.Int, codigoRegistro);
+                    requestPeticion.input('emisor_nif', sql.VarChar(20), emisorNif);
+                    requestPeticion.input('id_peticion', sql.VarChar(50), idPeticion);
+                    requestPeticion.input('fecha', sql.SmallDateTime, fechaParsed);
+                    requestPeticion.input('fecha_respuesta', sql.SmallDateTime, fechaRespuestaParsed);
+                    requestPeticion.input('importe_base', sql.Money, importeParsed);
+                    requestPeticion.input('porcentaje_impuesto', sql.Decimal(5, 2), porcentajeParsed);
+                    requestPeticion.input('referencia', sql.VarChar(50), referencia);
+
+                    await requestPeticion.query(peticionQuery);
+
+                } catch (petErr) {
+                    logger.error(`❌ Error al insertar la petición ID ${peticion.$ ? peticion.$['id'] : 'Desconocido'}: ${petErr.message}`);
+                    console.error(petErr); 
+                }
             }
+
+
+            suma_euros_peticiones = suma_euros_peticiones + peticionBase
+            ++cont_peticiones
         }
 
         logger.info(`Información de facturación almacenada factura_id: ${IdTabla}`);
     } catch (err) {
-        logger.error('Error al guardar en la base de datos:', err);
-        logger.info(`Error al guardar los datos de facturación en la base de datos`);
+        logger.error(`Error crítico en la base de datos: ${err.message}`);
+        console.error(err); 
         if (!res.headersSent) res.status(500).send('Error al guardar los datos de facturación en la base de datos');
     } finally {
 
         if (pool) {
             try {
-               await pool.close();
+                await pool.close();
                 logger.info('Conexión de facturación cerrada correctamente');
             } catch (closeErr) {
                 logger.error('Error al cerrar la conexón:', closeErr);
@@ -2203,18 +2206,18 @@ async function processCorpmeFlotiFacturacion(xmlData, res) {
 
 // Middleware Gestor de Errores Global (Captura 413 y otros)
 app.use((err, req, res, next) => {
-    logger.error({ 
-        msg: 'Error global atrapado', 
-        status: err.status || 500, 
-        errMessage: err.message, 
-        ruta: req.originalUrl, 
-        ip: req.ip 
+    logger.error({
+        msg: 'Error global atrapado',
+        status: err.status || 500,
+        errMessage: err.message,
+        ruta: req.originalUrl,
+        ip: req.ip
     });
-    
+
     if (err.type === 'entity.too.large') {
-        return res.status(413).send({ error: 'La respuesta excediÃ³ el tamaÃ±o permitido.' });
+        return res.status(413).send({ error: 'La respuesta excedió el tamaÃ±o permitido.' });
     }
-    
+
     res.status(err.status || 500).send({ error: 'Hubo un problema procesando la petición.' });
 });
 
@@ -2263,5 +2266,5 @@ function runFetchPendingRequests() {
         });
 }
 
-    // Configurar la función para ejecutarse cada 10 minutos (600000 milisegundos)
+// Configurar la función para ejecutarse cada 10 minutos (600000 milisegundos)
 setInterval(runFetchPendingRequests, 20000);       

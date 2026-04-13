@@ -870,7 +870,11 @@ async function processReenvioCorpmeFloti(xmlData, idPeticion, idVersion) {
             logger.info(`XML sin PDF y sin firma guardado en la base de datos para idCorpme: ${identificador}`);
 
         } catch (err) {
-            logger.error('Error al guardar el XML en la base de datos:', err);
+             // Convierte TODO el objeto de error a un string visible
+            const detalleError = JSON.stringify(err, Object.getOwnPropertyNames(err), 2);
+            
+            logger.error(`[processReenvioCorpmeFloti] Error al guardar el XML. Detalles: ${detalleError}`);
+
             if (!res.headersSent) res.status(500).send('Error al guardar el XML en la base de datos');
             return;
         }
@@ -1375,7 +1379,11 @@ async function processCorpmeFloti(xmlData, res) {
             logger.info(`XML sin PDF y sin firma guardado en la base de datos para idCorpme: ${identificador}`);
 
         } catch (err) {
-            logger.error('Error al guardar el XML en la base de datos:', err);
+            // Convierte TODO el objeto de error a un string visible
+            const detalleError = JSON.stringify(err, Object.getOwnPropertyNames(err), 2);
+            
+            logger.error(`[processCorpmeFloti] Error al guardar el XML. Detalles: ${detalleError}`);
+
             if (!res.headersSent) res.status(500).send('Error al guardar el XML en la base de datos');
             return;
         }
